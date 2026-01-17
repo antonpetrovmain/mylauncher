@@ -2,10 +2,6 @@
 
 from pathlib import Path
 
-# Hotkey settings
-HOTKEY_KEY = "D"
-HOTKEY_MODIFIERS = ["Cmd", "Ctrl"]
-
 # History settings
 COMMAND_HISTORY_FILE = Path.home() / ".mycli_history.json"
 MAX_COMMAND_HISTORY = 100
@@ -26,7 +22,6 @@ SEARCH_HEIGHT = 28
 FONT_FAMILY = "Menlo"
 FONT_SIZE_INPUT = 14
 FONT_SIZE_TABLE = 12
-FONT_SIZE_LABEL = 12
 
 # Colors for app list (light mode, dark mode)
 COLOR_RUNNING = ("#e8f4e8", "#1a4a2d")  # soft green for running apps

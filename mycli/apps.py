@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from AppKit import NSRunningApplication, NSWorkspace
-from pathlib import Path
 
 from .config import APP_HISTORY_FILE, MAX_APP_HISTORY
 

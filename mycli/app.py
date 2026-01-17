@@ -8,9 +8,7 @@ import sys
 import threading
 
 import rumps
-from AppKit import NSApplicationActivateIgnoringOtherApps, NSWorkspace
 
-from .config import COMMAND_TIMEOUT_SECONDS
 from .executor import execute_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
