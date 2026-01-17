@@ -116,13 +116,24 @@ def get_running_apps() -> list[dict]:
     return apps
 
 
-def get_installed_apps() -> list[dict]:
+_installed_apps_cache: list[dict] | None = None
+
+
+def get_installed_apps(use_cache: bool = True) -> list[dict]:
     """
     Get installed apps from /Applications and ~/Applications.
+
+    Args:
+        use_cache: If True, return cached results if available (faster)
 
     Returns:
         List of dicts with name, path, and is_running=False
     """
+    global _installed_apps_cache
+
+    if use_cache and _installed_apps_cache is not None:
+        return _installed_apps_cache
+
     apps = []
     seen_names = set()
 
@@ -153,6 +164,7 @@ def get_installed_apps() -> list[dict]:
                 'is_running': False,
             })
 
+    _installed_apps_cache = apps
     return apps
 
 

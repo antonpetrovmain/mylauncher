@@ -36,12 +36,10 @@ def run_popup() -> None:
     workspace = NSWorkspace.sharedWorkspace()
     previous_app = workspace.frontmostApplication()
 
-    # Set up CustomTkinter
+    # Set up CustomTkinter (minimal setup for speed)
     ctk.set_appearance_mode("system")
-    ctk.set_default_color_theme("blue")
 
     root = ctk.CTk()
-    root.withdraw()
     root.title("MyCLI")
 
     # Center window on screen
@@ -284,16 +282,18 @@ def run_popup() -> None:
     root.bind("<Escape>", on_escape)
     root.protocol("WM_DELETE_WINDOW", root.quit)
 
-    # Populate items before showing window
-    initial_items = get_app_suggestions("")
-    update_items_list(initial_items)
-    root.update_idletasks()
-
-    # Show window
+    # Show window immediately (before loading apps for faster perceived startup)
     root.deiconify()
     root.lift()
     root.focus_force()
     search_entry.focus_set()
+
+    # Load apps after window is visible (deferred for speed)
+    def load_initial_items():
+        initial_items = get_app_suggestions("")
+        update_items_list(initial_items)
+
+    root.after(1, load_initial_items)
 
     # Run event loop
     root.mainloop()
