@@ -1,0 +1,3 @@
+rumps
+pyobjc-framework-Quartz
+desktop-notifier
