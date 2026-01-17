@@ -7,7 +7,9 @@ setup(
     install_requires=[
         "rumps",
         "pyobjc-framework-Quartz",
+        "pyobjc-framework-Cocoa",
         "desktop-notifier",
+        "customtkinter>=5.2.0",
     ],
     entry_points={
         "console_scripts": [
