@@ -49,58 +49,21 @@ from .notifier import notify_failure, notify_success
 class BlockCursorFieldEditor(NSTextView):
     """Custom field editor that draws a non-blinking block cursor."""
 
-    _cursorTimer = objc.ivar()
-    _cursorVisible = objc.ivar()
+    def updateInsertionPointStateAndRestartTimer_(self, restart):
+        """Override to prevent cursor blinking by never restarting the blink timer."""
+        # Call super but always with restart=False to stop blinking
+        objc.super(BlockCursorFieldEditor, self).updateInsertionPointStateAndRestartTimer_(False)
 
-    def initWithFrame_(self, frame):
-        self = objc.super(BlockCursorFieldEditor, self).initWithFrame_(frame)
-        if self is None:
-            return None
-        self._cursorVisible = True
-        self._cursorTimer = None
-        return self
-
-    def becomeFirstResponder(self):
-        result = objc.super(BlockCursorFieldEditor, self).becomeFirstResponder()
-        if result:
-            self._startCursorTimer()
-        return result
-
-    def resignFirstResponder(self):
-        self._stopCursorTimer()
-        return objc.super(BlockCursorFieldEditor, self).resignFirstResponder()
-
-    @objc.python_method
-    def _startCursorTimer(self):
-        """Start timer to keep cursor visible."""
-        if self._cursorTimer is None:
-            from Foundation import NSTimer
-            self._cursorTimer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                0.1, self, b'_keepCursorVisible:', None, True
-            )
-
-    @objc.python_method
-    def _stopCursorTimer(self):
-        """Stop the cursor timer."""
-        if self._cursorTimer is not None:
-            self._cursorTimer.invalidate()
-            self._cursorTimer = None
-
-    def _keepCursorVisible_(self, timer):
-        """Timer callback to force cursor to stay visible."""
-        self._cursorVisible = True
-        self.setNeedsDisplay_(True)
+    def setInsertionPointColor_(self, color):
+        """Set cursor color and ensure it's visible."""
+        objc.super(BlockCursorFieldEditor, self).setInsertionPointColor_(color)
 
     def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
-        """Override to draw a non-blinking block cursor."""
-        print(f">>> drawInsertionPoint called, flag={flag}")
-        # Always draw the cursor regardless of flag
-        block_width = 8.0
-        block_rect = NSMakeRect(
-            rect.origin.x, rect.origin.y, block_width, rect.size.height
+        """Override to always draw the cursor (ignore turnedOn flag)."""
+        # Always draw as if turned on
+        objc.super(BlockCursorFieldEditor, self).drawInsertionPointInRect_color_turnedOn_(
+            rect, color, True
         )
-        NSColor.controlTextColor().set()
-        NSRectFill(block_rect)
 
 
 class WindowDelegate(NSObject):
