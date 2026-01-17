@@ -149,9 +149,19 @@ class MyCLIApp(rumps.App):
 def main():
     """Entry point for MyCLI application."""
     # Handle Ctrl+C gracefully
-    signal.signal(signal.SIGINT, lambda *args: rumps.quit_application())
+    def signal_handler(*args):
+        print("\nQuitting...")
+        rumps.quit_application()
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     app = MyCLIApp()
+
+    # Timer to allow Python to process signals
+    timer = rumps.Timer(lambda _: None, 1)
+    timer.start()
+
     app.run()
 
 
