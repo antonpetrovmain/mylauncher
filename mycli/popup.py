@@ -86,7 +86,47 @@ def run_popup() -> None:
     items_frame.grid(row=1, column=0, padx=10, pady=(5, 10), sticky="nsew")
     items_frame.grid_columnconfigure(0, weight=1)
 
+    # Slow down mouse wheel scrolling
+    def on_mousewheel(event):
+        # Scroll by smaller amount (divide delta by larger number for slower scroll)
+        items_frame._parent_canvas.yview_scroll(int(-1 * (event.delta / 240)), "units")
+        return "break"
+
+    items_frame._parent_canvas.bind("<MouseWheel>", on_mousewheel)
+    items_frame.bind("<MouseWheel>", on_mousewheel)
+
     # --- Item management functions ---
+
+    def scroll_to_selected() -> None:
+        """Scroll the items frame to make the selected item visible."""
+        if not item_buttons or selected_index[0] >= len(item_buttons):
+            return
+
+        button = item_buttons[selected_index[0]]
+        # Update to get current geometry
+        items_frame.update_idletasks()
+
+        # Get the canvas and its visible region
+        canvas = items_frame._parent_canvas
+        canvas_height = canvas.winfo_height()
+
+        # Get button position relative to the scrollable frame's interior
+        button_y = button.winfo_y()
+        button_height = button.winfo_height()
+
+        # Get current scroll position
+        scroll_top = canvas.canvasy(0)
+        scroll_bottom = scroll_top + canvas_height
+
+        # Check if button is above visible area
+        if button_y < scroll_top:
+            # Scroll up to show the button
+            canvas.yview_moveto(button_y / items_frame._parent_frame.winfo_height())
+        # Check if button is below visible area
+        elif button_y + button_height > scroll_bottom:
+            # Scroll down to show the button
+            target = (button_y + button_height - canvas_height) / items_frame._parent_frame.winfo_height()
+            canvas.yview_moveto(target)
 
     def update_selection_highlight() -> None:
         for i, button in enumerate(item_buttons):
@@ -98,6 +138,8 @@ def run_popup() -> None:
             else:
                 color = COLOR_INSTALLED
             button.configure(fg_color=color)
+        # Scroll to make selected item visible
+        scroll_to_selected()
 
     def select_item(index: int) -> None:
         if 0 <= index < len(current_items):
