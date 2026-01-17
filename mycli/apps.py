@@ -1,59 +1,88 @@
 """App discovery and management for MyCLI."""
 
+from __future__ import annotations
+
 import json
-from pathlib import Path
 
 from AppKit import NSRunningApplication, NSWorkspace
+from pathlib import Path
 
-APP_HISTORY_FILE = Path.home() / ".mycli_app_history.json"
-MAX_APP_HISTORY = 50
+from .config import APP_HISTORY_FILE, MAX_APP_HISTORY
+
+
+class AppHistory:
+    """App usage history storage with persistence."""
+
+    def __init__(self, max_items: int = MAX_APP_HISTORY):
+        self._items: list[str] = []
+        self._max_items = max_items
+        self._load()
+
+    def _load(self) -> None:
+        """Load history from disk."""
+        try:
+            if APP_HISTORY_FILE.exists():
+                data = json.loads(APP_HISTORY_FILE.read_text())
+                self._items = data.get("apps", [])[: self._max_items]
+        except Exception:
+            self._items = []
+
+    def _save(self) -> None:
+        """Save history to disk."""
+        try:
+            APP_HISTORY_FILE.write_text(
+                json.dumps({"apps": self._items}, indent=2)
+            )
+        except Exception:
+            pass
+
+    def add(self, bundle_id: str) -> None:
+        """Add an app to history. Moves duplicates to top, trims to max size."""
+        if not bundle_id:
+            return
+
+        # Remove duplicate if exists
+        if bundle_id in self._items:
+            self._items.remove(bundle_id)
+
+        # Add to front (newest first)
+        self._items.insert(0, bundle_id)
+
+        # Trim to max size
+        self._items = self._items[: self._max_items]
+        self._save()
+
+    def get_recency(self, bundle_id: str) -> int:
+        """Get recency score for an app (lower = more recent, 999 if not in history)."""
+        if not bundle_id:
+            return 999
+        try:
+            return self._items.index(bundle_id)
+        except ValueError:
+            return 999
+
+    def get_all(self) -> list[str]:
+        """Get all items in history (newest first)."""
+        return self._items.copy()
+
+
+# Module-level instance for convenience
+_app_history = AppHistory()
 
 
 def load_app_history() -> list[str]:
     """Load app history (list of bundle_ids, most recent first)."""
-    if not APP_HISTORY_FILE.exists():
-        return []
-    try:
-        with open(APP_HISTORY_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("apps", [])
-    except (json.JSONDecodeError, IOError):
-        return []
+    return _app_history.get_all()
 
 
 def save_app_to_history(bundle_id: str) -> None:
     """Record an app as recently used."""
-    if not bundle_id:
-        return
-
-    apps = load_app_history()
-
-    # Remove if already exists to avoid duplicates
-    if bundle_id in apps:
-        apps.remove(bundle_id)
-
-    # Add to the beginning (most recent)
-    apps.insert(0, bundle_id)
-
-    # Cap at max size
-    apps = apps[:MAX_APP_HISTORY]
-
-    try:
-        with open(APP_HISTORY_FILE, "w") as f:
-            json.dump({"apps": apps}, f, indent=2)
-    except IOError:
-        pass  # Silently fail if we can't write history
+    _app_history.add(bundle_id)
 
 
 def get_app_recency(bundle_id: str) -> int:
     """Get recency score for an app (lower = more recent, 999 if not in history)."""
-    if not bundle_id:
-        return 999
-    apps = load_app_history()
-    try:
-        return apps.index(bundle_id)
-    except ValueError:
-        return 999
+    return _app_history.get_recency(bundle_id)
 
 
 def get_running_apps() -> list[dict]:
@@ -132,7 +161,7 @@ def get_app_suggestions(filter_text: str = "") -> list[dict]:
     Get combined list of apps: running apps first, then installed.
 
     Filters by case-insensitive substring match on app name.
-    Running apps are prioritized and shown first.
+    Running apps are prioritized and shown first, sorted by recency.
 
     Args:
         filter_text: Optional text to filter app names

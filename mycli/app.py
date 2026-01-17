@@ -1,5 +1,7 @@
 """Main rumps application for MyCLI."""
 
+from __future__ import annotations
+
 import signal
 
 import rumps
@@ -23,11 +25,13 @@ from AppKit import (
 
 import objc
 from Foundation import NSIndexSet, NSObject
-from mycli.apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
-from mycli.executor import execute_command, launch_command
-from mycli.history import get_recent, save_command
-from mycli.hotkey import register_hotkey
-from mycli.notifier import notify_failure, notify_success
+
+from .apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
+from .config import POPUP_HEIGHT, POPUP_WIDTH
+from .executor import execute_command, launch_command
+from .history import get_recent, save_command
+from .hotkey import register_hotkey
+from .notifier import notify_failure, notify_success
 
 
 class WindowDelegate(NSObject):
@@ -199,15 +203,13 @@ class MyCLIApp(rumps.App):
         NSApp.activateIgnoringOtherApps_(True)
 
         # Create panel window (taller to fit suggestions)
-        panel_width = 500
-        panel_height = 300
         screen = NSScreen.mainScreen()
         screen_rect = screen.frame()
-        x = screen_rect.origin.x + (screen_rect.size.width - panel_width) / 2
-        y = screen_rect.origin.y + (screen_rect.size.height - panel_height) / 2
+        x = screen_rect.origin.x + (screen_rect.size.width - POPUP_WIDTH) / 2
+        y = screen_rect.origin.y + (screen_rect.size.height - POPUP_HEIGHT) / 2
 
         panel = NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
-            NSMakeRect(x, y, panel_width, panel_height),
+            NSMakeRect(x, y, POPUP_WIDTH, POPUP_HEIGHT),
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
             NSBackingStoreBuffered,
             False,
@@ -222,7 +224,7 @@ class MyCLIApp(rumps.App):
         content_view = panel.contentView()
 
         # Create input label
-        label = NSTextField.alloc().initWithFrame_(NSMakeRect(20, panel_height - 35, 460, 20))
+        label = NSTextField.alloc().initWithFrame_(NSMakeRect(20, POPUP_HEIGHT - 35, 460, 20))
         label.setStringValue_("Enter command:")
         label.setBezeled_(False)
         label.setDrawsBackground_(False)
@@ -231,7 +233,7 @@ class MyCLIApp(rumps.App):
         content_view.addSubview_(label)
 
         # Create input field
-        input_field = NSTextField.alloc().initWithFrame_(NSMakeRect(20, panel_height - 60, 460, 24))
+        input_field = NSTextField.alloc().initWithFrame_(NSMakeRect(20, POPUP_HEIGHT - 60, 460, 24))
         input_field.setStringValue_("")
         content_view.addSubview_(input_field)
 

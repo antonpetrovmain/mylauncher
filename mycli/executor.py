@@ -1,11 +1,14 @@
 """Command execution logic for MyCLI."""
 
+from __future__ import annotations
+
 import os
 import signal
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+
+from .config import COMMAND_TIMEOUT_SECONDS
 
 
 @dataclass
@@ -38,7 +41,7 @@ def launch_command(command: str) -> None:
     )
 
 
-def execute_command(command: str, timeout: Optional[int] = 10) -> ExecutionResult:
+def execute_command(command: str, timeout: int | None = COMMAND_TIMEOUT_SECONDS) -> ExecutionResult:
     """
     Execute a command in the user's home directory.
 

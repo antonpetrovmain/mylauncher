@@ -1,5 +1,7 @@
 """Notification wrapper for MyCLI using desktop-notifier."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 
