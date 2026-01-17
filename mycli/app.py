@@ -10,22 +10,26 @@ from AppKit import (
     NSApplicationActivateIgnoringOtherApps,
     NSBackingStoreBuffered,
     NSBezelBorder,
+    NSBezierPath,
+    NSColor,
     NSFloatingWindowLevel,
     NSFont,
     NSMakeRect,
     NSPanel,
+    NSRectFill,
     NSScreen,
     NSScrollView,
     NSTableColumn,
     NSTableView,
     NSTextField,
+    NSTextView,
     NSWindowStyleMaskClosable,
     NSWindowStyleMaskTitled,
     NSWorkspace,
 )
 
 import objc
-from Foundation import NSIndexSet, NSObject
+from Foundation import NSIndexSet, NSObject, NSRange
 
 from .apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
 from .config import (
@@ -40,6 +44,51 @@ from .executor import execute_command, launch_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
+
+
+class BlockCursorTextView(NSTextView):
+    """Custom NSTextView that draws a block cursor instead of a line cursor."""
+
+    def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
+        """Override to draw a block cursor."""
+        if flag:
+            # Draw a filled block cursor
+            block_width = 8.0
+            block_rect = NSMakeRect(
+                rect.origin.x, rect.origin.y, block_width, rect.size.height
+            )
+            NSColor.controlTextColor().set()
+            NSRectFill(block_rect)
+        else:
+            # When cursor is "off" (blinking), still draw to prevent blinking
+            block_width = 8.0
+            block_rect = NSMakeRect(
+                rect.origin.x, rect.origin.y, block_width, rect.size.height
+            )
+            NSColor.controlTextColor().set()
+            NSRectFill(block_rect)
+
+    def setInsertionPointColor_(self, color):
+        """Override to ensure block cursor color is set."""
+        super().setInsertionPointColor_(color)
+
+
+class BlockCursorPanel(NSPanel):
+    """Custom NSPanel that provides a block cursor field editor."""
+
+    @objc.python_method
+    def _setup_field_editor(self):
+        """Create the custom field editor."""
+        self._blockCursorEditor = BlockCursorTextView.alloc().initWithFrame_(
+            NSMakeRect(0, 0, 100, 20)
+        )
+        self._blockCursorEditor.setFieldEditor_(True)
+
+    def fieldEditor_forObject_(self, createIfNeeded, obj):
+        """Return our custom block cursor field editor."""
+        if not hasattr(self, '_blockCursorEditor') or self._blockCursorEditor is None:
+            self._setup_field_editor()
+        return self._blockCursorEditor
 
 
 class WindowDelegate(NSObject):
@@ -275,7 +324,7 @@ class MyCLIApp(rumps.App):
         x = screen_rect.origin.x + (screen_rect.size.width - POPUP_WIDTH) / 2
         y = screen_rect.origin.y + (screen_rect.size.height - POPUP_HEIGHT) / 2
 
-        panel = NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+        panel = BlockCursorPanel.alloc().initWithContentRect_styleMask_backing_defer_(
             NSMakeRect(x, y, POPUP_WIDTH, POPUP_HEIGHT),
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
             NSBackingStoreBuffered,
