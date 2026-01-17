@@ -23,7 +23,7 @@ from AppKit import (
 
 import objc
 from Foundation import NSIndexSet, NSObject
-from mycli.apps import focus_app, get_app_suggestions, launch_app
+from mycli.apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
 from mycli.executor import execute_command, launch_command
 from mycli.history import get_recent, save_command
 from mycli.hotkey import register_hotkey
@@ -281,9 +281,12 @@ class MyCLIApp(rumps.App):
             # An app was selected from suggestions
             if selected_app['is_running']:
                 print(f">>> focusing app: {selected_app['name']}")
+                save_app_to_history(selected_app['bundle_id'])
                 focus_app(selected_app['app_obj'])
             else:
                 print(f">>> launching app: {selected_app['path']}")
+                # For installed apps, use bundle_id if available, otherwise app name
+                save_app_to_history(selected_app.get('bundle_id') or selected_app['name'])
                 launch_app(selected_app['path'])
         elif command:
             # No app selected, treat as shell command

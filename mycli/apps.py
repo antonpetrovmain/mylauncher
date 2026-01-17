@@ -1,8 +1,59 @@
 """App discovery and management for MyCLI."""
 
+import json
 from pathlib import Path
 
 from AppKit import NSRunningApplication, NSWorkspace
+
+APP_HISTORY_FILE = Path.home() / ".mycli_app_history.json"
+MAX_APP_HISTORY = 50
+
+
+def load_app_history() -> list[str]:
+    """Load app history (list of bundle_ids, most recent first)."""
+    if not APP_HISTORY_FILE.exists():
+        return []
+    try:
+        with open(APP_HISTORY_FILE, "r") as f:
+            data = json.load(f)
+            return data.get("apps", [])
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def save_app_to_history(bundle_id: str) -> None:
+    """Record an app as recently used."""
+    if not bundle_id:
+        return
+
+    apps = load_app_history()
+
+    # Remove if already exists to avoid duplicates
+    if bundle_id in apps:
+        apps.remove(bundle_id)
+
+    # Add to the beginning (most recent)
+    apps.insert(0, bundle_id)
+
+    # Cap at max size
+    apps = apps[:MAX_APP_HISTORY]
+
+    try:
+        with open(APP_HISTORY_FILE, "w") as f:
+            json.dump({"apps": apps}, f, indent=2)
+    except IOError:
+        pass  # Silently fail if we can't write history
+
+
+def get_app_recency(bundle_id: str) -> int:
+    """Get recency score for an app (lower = more recent, 999 if not in history)."""
+    if not bundle_id:
+        return 999
+    apps = load_app_history()
+    try:
+        return apps.index(bundle_id)
+    except ValueError:
+        return 999
 
 
 def get_running_apps() -> list[dict]:
@@ -112,10 +163,10 @@ def get_app_suggestions(filter_text: str = "") -> list[dict]:
             if filter_lower in app['name'].lower()
         ]
 
-    # Sort: running apps first (already are), then alphabetically within each group
+    # Sort: running apps by recency (then alphabetically), other apps alphabetically
     running_apps = sorted(
         [a for a in all_apps if a['is_running']],
-        key=lambda x: x['name'].lower()
+        key=lambda x: (get_app_recency(x['bundle_id']), x['name'].lower())
     )
     other_apps = sorted(
         [a for a in all_apps if not a['is_running']],
