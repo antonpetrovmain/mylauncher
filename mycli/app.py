@@ -93,6 +93,7 @@ class BlockCursorFieldEditor(NSTextView):
 
     def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
         """Override to draw a non-blinking block cursor."""
+        print(f">>> drawInsertionPoint called, flag={flag}")
         # Always draw the cursor regardless of flag
         block_width = 8.0
         block_rect = NSMakeRect(
@@ -124,6 +125,7 @@ class WindowDelegate(NSObject):
 
     def windowWillReturnFieldEditor_toObject_(self, sender, client):
         """Return our custom block cursor field editor."""
+        print(f">>> windowWillReturnFieldEditor called for {client}")
         return self._fieldEditor
 
 
