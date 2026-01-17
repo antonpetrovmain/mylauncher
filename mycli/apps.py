@@ -127,7 +127,7 @@ def get_installed_apps(use_cache: bool = True) -> list[dict]:
         use_cache: If True, return cached results if available (faster)
 
     Returns:
-        List of dicts with name, path, and is_running=False
+        List of dicts with name, path, is_running=False, name_lower (pre-sorted alphabetically)
     """
     global _installed_apps_cache
 
@@ -150,20 +150,24 @@ def get_installed_apps(use_cache: bool = True) -> list[dict]:
         # Find all .app bundles (non-recursive to avoid nested apps)
         for app_path in app_dir.glob('*.app'):
             name = app_path.stem  # Remove .app extension
+            name_lower = name.lower()
 
             # Skip duplicates (prefer first found)
-            if name.lower() in seen_names:
+            if name_lower in seen_names:
                 continue
-            seen_names.add(name.lower())
+            seen_names.add(name_lower)
 
             apps.append({
                 'name': name,
+                'name_lower': name_lower,  # Cache lowercase for faster filtering
                 'bundle_id': None,
                 'app_obj': None,
                 'path': str(app_path),
                 'is_running': False,
             })
 
+    # Pre-sort alphabetically so we don't need to sort each time
+    apps.sort(key=lambda x: x['name_lower'])
     _installed_apps_cache = apps
     return apps
 
@@ -182,39 +186,38 @@ def get_app_suggestions(filter_text: str = "") -> list[dict]:
         List of app dicts, running apps first, then installed
     """
     running = get_running_apps()
-    installed = get_installed_apps()
+    installed = get_installed_apps()  # Already sorted alphabetically from cache
 
     # Track running app names to avoid duplicates
     running_names = {app['name'].lower() for app in running}
 
-    # Filter installed apps to exclude ones that are running
-    installed_filtered = [
-        app for app in installed
-        if app['name'].lower() not in running_names
-    ]
+    # Filter and apply search in one pass for installed apps
+    # (installed is already sorted, so we preserve order)
+    filter_lower = filter_text.lower() if filter_text else ""
 
-    # Combine: running first, then installed
-    all_apps = running + installed_filtered
-
-    # Apply filter if provided
-    if filter_text:
-        filter_lower = filter_text.lower()
-        all_apps = [
-            app for app in all_apps
+    if filter_lower:
+        installed_filtered = [
+            app for app in installed
+            if app['name_lower'] not in running_names and filter_lower in app['name_lower']
+        ]
+        running_filtered = [
+            app for app in running
             if filter_lower in app['name'].lower()
         ]
+    else:
+        installed_filtered = [
+            app for app in installed
+            if app['name_lower'] not in running_names
+        ]
+        running_filtered = running
 
-    # Sort: running apps by recency (then alphabetically), other apps alphabetically
-    running_apps = sorted(
-        [a for a in all_apps if a['is_running']],
+    # Sort only running apps by recency (installed already sorted from cache)
+    running_sorted = sorted(
+        running_filtered,
         key=lambda x: (get_app_recency(x['bundle_id']), x['name'].lower())
     )
-    other_apps = sorted(
-        [a for a in all_apps if not a['is_running']],
-        key=lambda x: x['name'].lower()
-    )
 
-    return running_apps + other_apps
+    return running_sorted + installed_filtered
 
 
 def focus_app(app_obj: NSRunningApplication) -> bool:
