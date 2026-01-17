@@ -46,12 +46,12 @@ from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
 
 
-class BlockCursorTextView(NSTextView):
-    """Custom NSTextView that draws a block cursor instead of a line cursor."""
+class BlockCursorFieldEditor(NSTextView):
+    """Custom field editor that draws a block cursor."""
 
     def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
-        """Override to draw a block cursor."""
-        # Always draw the block cursor (no blinking)
+        """Override to draw a non-blinking block cursor."""
+        # Always draw the cursor (ignore flag to prevent blinking)
         block_width = 8.0
         block_rect = NSMakeRect(
             rect.origin.x, rect.origin.y, block_width, rect.size.height
@@ -60,30 +60,29 @@ class BlockCursorTextView(NSTextView):
         NSRectFill(block_rect)
 
 
-class BlockCursorPanel(NSPanel):
-    """Custom NSPanel that provides a block cursor field editor."""
+class WindowDelegate(NSObject):
+    """Delegate to handle window close and provide custom field editor."""
 
-    @objc.python_method
-    def _setup_field_editor(self):
-        """Create the custom field editor."""
-        self._blockCursorEditor = BlockCursorTextView.alloc().initWithFrame_(
+    _fieldEditor = objc.ivar()
+
+    def init(self):
+        self = objc.super(WindowDelegate, self).init()
+        if self is None:
+            return None
+        # Create the custom field editor
+        self._fieldEditor = BlockCursorFieldEditor.alloc().initWithFrame_(
             NSMakeRect(0, 0, 100, 20)
         )
-        self._blockCursorEditor.setFieldEditor_(True)
-
-    def fieldEditor_forObject_(self, createIfNeeded, obj):
-        """Return our custom block cursor field editor."""
-        if not hasattr(self, '_blockCursorEditor') or self._blockCursorEditor is None:
-            self._setup_field_editor()
-        return self._blockCursorEditor
-
-
-class WindowDelegate(NSObject):
-    """Delegate to handle window close."""
+        self._fieldEditor.setFieldEditor_(True)
+        return self
 
     def windowWillClose_(self, notification):
         """Called when window is closing."""
         NSApp.stopModal()
+
+    def windowWillReturnFieldEditor_toObject_(self, sender, client):
+        """Return our custom block cursor field editor."""
+        return self._fieldEditor
 
 
 class SuggestionDelegate(NSObject):
@@ -311,7 +310,7 @@ class MyCLIApp(rumps.App):
         x = screen_rect.origin.x + (screen_rect.size.width - POPUP_WIDTH) / 2
         y = screen_rect.origin.y + (screen_rect.size.height - POPUP_HEIGHT) / 2
 
-        panel = BlockCursorPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+        panel = NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
             NSMakeRect(x, y, POPUP_WIDTH, POPUP_HEIGHT),
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
             NSBackingStoreBuffered,
