@@ -47,11 +47,53 @@ from .notifier import notify_failure, notify_success
 
 
 class BlockCursorFieldEditor(NSTextView):
-    """Custom field editor that draws a block cursor."""
+    """Custom field editor that draws a non-blinking block cursor."""
+
+    _cursorTimer = objc.ivar()
+    _cursorVisible = objc.ivar()
+
+    def initWithFrame_(self, frame):
+        self = objc.super(BlockCursorFieldEditor, self).initWithFrame_(frame)
+        if self is None:
+            return None
+        self._cursorVisible = True
+        self._cursorTimer = None
+        return self
+
+    def becomeFirstResponder(self):
+        result = objc.super(BlockCursorFieldEditor, self).becomeFirstResponder()
+        if result:
+            self._startCursorTimer()
+        return result
+
+    def resignFirstResponder(self):
+        self._stopCursorTimer()
+        return objc.super(BlockCursorFieldEditor, self).resignFirstResponder()
+
+    @objc.python_method
+    def _startCursorTimer(self):
+        """Start timer to keep cursor visible."""
+        if self._cursorTimer is None:
+            from Foundation import NSTimer
+            self._cursorTimer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+                0.1, self, b'_keepCursorVisible:', None, True
+            )
+
+    @objc.python_method
+    def _stopCursorTimer(self):
+        """Stop the cursor timer."""
+        if self._cursorTimer is not None:
+            self._cursorTimer.invalidate()
+            self._cursorTimer = None
+
+    def _keepCursorVisible_(self, timer):
+        """Timer callback to force cursor to stay visible."""
+        self._cursorVisible = True
+        self.setNeedsDisplay_(True)
 
     def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
         """Override to draw a non-blinking block cursor."""
-        # Always draw the cursor (ignore flag to prevent blinking)
+        # Always draw the cursor regardless of flag
         block_width = 8.0
         block_rect = NSMakeRect(
             rect.origin.x, rect.origin.y, block_width, rect.size.height
