@@ -61,13 +61,25 @@ python -m mycli
 
 ### Keyboard shortcuts
 
+**Navigation:**
 | Shortcut | Action |
 |----------|--------|
 | `Cmd+Ctrl+D` | Open command popup |
-| `↑` | Move up in suggestions |
-| `↓` | Move down in suggestions |
+| `↑` / `Ctrl+P` | Move up in suggestions |
+| `↓` / `Ctrl+N` | Move down in suggestions |
 | `Enter` | Select item / run command |
 | `Escape` | Close popup |
+
+**Editing (search field):**
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+A` | Move to beginning |
+| `Ctrl+E` | Move to end |
+| `Ctrl+K` | Delete to end |
+| `Ctrl+U` | Delete to beginning |
+| `Ctrl+W` | Delete word backward |
+| `Option+Backspace` | Delete word backward |
+| `Ctrl+D` | Delete character forward |
 
 ### Menu bar options
 

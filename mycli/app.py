@@ -11,6 +11,7 @@ from AppKit import (
     NSBackingStoreBuffered,
     NSBezelBorder,
     NSFloatingWindowLevel,
+    NSFont,
     NSMakeRect,
     NSPanel,
     NSScreen,
@@ -27,7 +28,14 @@ import objc
 from Foundation import NSIndexSet, NSObject
 
 from .apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
-from .config import POPUP_HEIGHT, POPUP_WIDTH
+from .config import (
+    FONT_FAMILY,
+    FONT_SIZE_INPUT,
+    FONT_SIZE_LABEL,
+    FONT_SIZE_TABLE,
+    POPUP_HEIGHT,
+    POPUP_WIDTH,
+)
 from .executor import execute_command, launch_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
@@ -81,11 +89,11 @@ class SuggestionDelegate(NSObject):
         NSApp.stopModal()
 
     def control_textView_doCommandBySelector_(self, control, text_view, selector):
-        """Handle special key commands like arrow keys."""
+        """Handle special key commands like arrow keys and Emacs bindings."""
         selector_name = str(selector)
 
+        # Arrow down / Ctrl+N - move selection down
         if selector_name == 'moveDown:':
-            # Move selection down in table
             current = self.table_view.selectedRow()
             if current < len(self.suggestions) - 1:
                 self.table_view.selectRowIndexes_byExtendingSelection_(
@@ -94,14 +102,73 @@ class SuggestionDelegate(NSObject):
                 self.table_view.scrollRowToVisible_(current + 1)
             return True
 
+        # Arrow up / Ctrl+P - move selection up
         if selector_name == 'moveUp:':
-            # Move selection up in table
             current = self.table_view.selectedRow()
             if current > 0:
                 self.table_view.selectRowIndexes_byExtendingSelection_(
                     NSIndexSet.indexSetWithIndex_(current - 1), False
                 )
                 self.table_view.scrollRowToVisible_(current - 1)
+            return True
+
+        # Ctrl+A - move to beginning of line
+        if selector_name == 'moveToBeginningOfLine:':
+            text_view.setSelectedRange_((0, 0))
+            return True
+
+        # Ctrl+E - move to end of line
+        if selector_name == 'moveToEndOfLine:':
+            length = len(text_view.string())
+            text_view.setSelectedRange_((length, 0))
+            return True
+
+        # Ctrl+K - delete to end of line
+        if selector_name in ('deleteToEndOfLine:', 'deleteToEndOfParagraph:'):
+            text = text_view.string()
+            selection = text_view.selectedRange()
+            cursor = selection.location
+            text_view.setString_(text[:cursor])
+            return True
+
+        # Ctrl+U - delete to beginning of line
+        if selector_name == 'deleteToBeginningOfLine:':
+            text = text_view.string()
+            selection = text_view.selectedRange()
+            cursor = selection.location
+            text_view.setString_(text[cursor:])
+            text_view.setSelectedRange_((0, 0))
+            return True
+
+        # Ctrl+W / Option+Backspace - delete word backward
+        if selector_name == 'deleteWordBackward:':
+            text = text_view.string()
+            selection = text_view.selectedRange()
+            cursor = selection.location
+            # Skip trailing spaces
+            pos = cursor
+            while pos > 0 and text[pos - 1] == ' ':
+                pos -= 1
+            # Delete word
+            while pos > 0 and text[pos - 1] != ' ':
+                pos -= 1
+            text_view.setString_(text[:pos] + text[cursor:])
+            text_view.setSelectedRange_((pos, 0))
+            return True
+
+        # Ctrl+D - delete character forward
+        if selector_name == 'deleteForward:':
+            text = text_view.string()
+            selection = text_view.selectedRange()
+            cursor = selection.location
+            if cursor < len(text):
+                text_view.setString_(text[:cursor] + text[cursor + 1:])
+                text_view.setSelectedRange_((cursor, 0))
+            return True
+
+        # Escape - cancel
+        if selector_name == 'cancelOperation:':
+            NSApp.stopModal()
             return True
 
         return False
@@ -223,6 +290,10 @@ class MyCLIApp(rumps.App):
 
         content_view = panel.contentView()
 
+        # Create fonts
+        label_font = NSFont.fontWithName_size_(FONT_FAMILY, FONT_SIZE_LABEL)
+        input_font = NSFont.fontWithName_size_(FONT_FAMILY, FONT_SIZE_INPUT)
+
         # Create input label
         label = NSTextField.alloc().initWithFrame_(NSMakeRect(20, POPUP_HEIGHT - 35, 460, 20))
         label.setStringValue_("Enter command:")
@@ -230,11 +301,13 @@ class MyCLIApp(rumps.App):
         label.setDrawsBackground_(False)
         label.setEditable_(False)
         label.setSelectable_(False)
+        label.setFont_(label_font)
         content_view.addSubview_(label)
 
-        # Create input field
+        # Create input field with monospace font
         input_field = NSTextField.alloc().initWithFrame_(NSMakeRect(20, POPUP_HEIGHT - 60, 460, 24))
         input_field.setStringValue_("")
+        input_field.setFont_(input_font)
         content_view.addSubview_(input_field)
 
         # Create suggestion table
@@ -249,12 +322,15 @@ class MyCLIApp(rumps.App):
             NSMakeRect(0, 0, 460, table_height)
         )
 
-        # Add column for app names
+        # Add column for app names with monospace font
+        table_font = NSFont.fontWithName_size_(FONT_FAMILY, FONT_SIZE_TABLE)
         column = NSTableColumn.alloc().initWithIdentifier_("app")
         column.setWidth_(440)
         column.headerCell().setStringValue_("Suggestions")
+        column.dataCell().setFont_(table_font)
         table_view.addTableColumn_(column)
         table_view.setHeaderView_(None)  # Hide header
+        table_view.setRowHeight_(18.0)  # Slightly taller rows for readability
 
         scroll_view.setDocumentView_(table_view)
         content_view.addSubview_(scroll_view)
