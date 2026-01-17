@@ -40,14 +40,16 @@ def run_popup() -> None:
     ctk.set_appearance_mode("system")
 
     root = ctk.CTk()
+    root.withdraw()  # Hide window until fully configured
     root.title("MyCLI")
 
-    # Center window on screen
-    root.update_idletasks()
+    # Calculate centered position
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     x = (screen_width - POPUP_WIDTH) // 2
     y = (screen_height - POPUP_HEIGHT) // 3
+
+    # Set geometry before showing (prevents top-left glitch)
     root.geometry(f"{POPUP_WIDTH}x{POPUP_HEIGHT}+{x}+{y}")
     root.attributes("-topmost", True)
 
