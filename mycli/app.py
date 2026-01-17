@@ -1,24 +1,126 @@
 """Main rumps application for MyCLI."""
 
 import signal
-import sys
 
 import rumps
 from AppKit import (
-    NSAlert,
-    NSAlertFirstButtonReturn,
     NSApp,
     NSApplicationActivateIgnoringOtherApps,
+    NSBackingStoreBuffered,
+    NSBezelBorder,
     NSFloatingWindowLevel,
-    NSRunningApplication,
+    NSMakeRect,
+    NSPanel,
+    NSScreen,
+    NSScrollView,
+    NSTableColumn,
+    NSTableView,
     NSTextField,
+    NSWindowStyleMaskClosable,
+    NSWindowStyleMaskTitled,
     NSWorkspace,
 )
 
-from mycli.executor import execute_command
+import objc
+from Foundation import NSIndexSet, NSObject
+from mycli.apps import focus_app, get_app_suggestions, launch_app
+from mycli.executor import execute_command, launch_command
 from mycli.history import get_recent, save_command
 from mycli.hotkey import register_hotkey
 from mycli.notifier import notify_failure, notify_success
+
+
+class WindowDelegate(NSObject):
+    """Delegate to handle window close."""
+
+    def windowWillClose_(self, notification):
+        """Called when window is closing."""
+        NSApp.stopModal()
+
+
+class SuggestionDelegate(NSObject):
+    """Delegate for text field and suggestion table."""
+
+    @objc.python_method
+    def _setup(self, table_view, input_field):
+        """Set up with references to table and input field (Python-only method)."""
+        self.table_view = table_view
+        self.input_field = input_field
+        self.suggestions = []
+        self.selected_app = None
+        self._update_suggestions("")
+
+    @objc.python_method
+    def _update_suggestions(self, filter_text):
+        """Update the suggestions list based on filter text."""
+        self.suggestions = get_app_suggestions(filter_text)
+        self.table_view.reloadData()
+        # Select first row if there are suggestions
+        if self.suggestions:
+            self.table_view.selectRowIndexes_byExtendingSelection_(
+                NSIndexSet.indexSetWithIndex_(0), False
+            )
+
+    def controlTextDidChange_(self, notification):
+        """Called when text changes in the input field."""
+        text = self.input_field.stringValue()
+        self._update_suggestions(text)
+
+    def controlTextDidEndEditing_(self, notification):
+        """Called when editing ends (Enter pressed)."""
+        # Check if an app is selected in the table
+        selected_row = self.table_view.selectedRow()
+        if selected_row >= 0 and selected_row < len(self.suggestions):
+            self.selected_app = self.suggestions[selected_row]
+        else:
+            self.selected_app = None
+        NSApp.stopModal()
+
+    def control_textView_doCommandBySelector_(self, control, text_view, selector):
+        """Handle special key commands like arrow keys."""
+        selector_name = str(selector)
+
+        if selector_name == 'moveDown:':
+            # Move selection down in table
+            current = self.table_view.selectedRow()
+            if current < len(self.suggestions) - 1:
+                self.table_view.selectRowIndexes_byExtendingSelection_(
+                    NSIndexSet.indexSetWithIndex_(current + 1), False
+                )
+                self.table_view.scrollRowToVisible_(current + 1)
+            return True
+
+        if selector_name == 'moveUp:':
+            # Move selection up in table
+            current = self.table_view.selectedRow()
+            if current > 0:
+                self.table_view.selectRowIndexes_byExtendingSelection_(
+                    NSIndexSet.indexSetWithIndex_(current - 1), False
+                )
+                self.table_view.scrollRowToVisible_(current - 1)
+            return True
+
+        return False
+
+    # NSTableViewDataSource methods
+    def numberOfRowsInTableView_(self, table_view):
+        """Return number of rows in table."""
+        return len(self.suggestions)
+
+    def tableView_objectValueForTableColumn_row_(self, table_view, column, row):
+        """Return value for a cell."""
+        if row >= len(self.suggestions):
+            return ""
+        app = self.suggestions[row]
+        name = app['name']
+        if app['is_running']:
+            return f"{name}  (running)"
+        return name
+
+    # NSTableViewDelegate method for double-click/selection
+    def tableViewSelectionDidChange_(self, notification):
+        """Called when table selection changes."""
+        pass  # Selection is handled on Enter key
 
 
 class MyCLIApp(rumps.App):
@@ -88,47 +190,114 @@ class MyCLIApp(rumps.App):
         ]
 
     def show_command_popup(self, _=None):
-        """Show the command input popup."""
+        """Show the command input popup with app suggestions."""
         print(">>> show_command_popup called")
         # Save the previously active application
         previous_app = NSWorkspace.sharedWorkspace().frontmostApplication()
 
         # Activate the app to bring window to foreground
         NSApp.activateIgnoringOtherApps_(True)
-        print(">>> app activated")
 
-        # Create alert with text field
-        alert = NSAlert.alloc().init()
-        alert.setMessageText_("MyCLI")
-        alert.setInformativeText_("Enter command to run:")
-        alert.addButtonWithTitle_("Run")
-        alert.addButtonWithTitle_("Cancel")
+        # Create panel window (taller to fit suggestions)
+        panel_width = 500
+        panel_height = 300
+        screen = NSScreen.mainScreen()
+        screen_rect = screen.frame()
+        x = screen_rect.origin.x + (screen_rect.size.width - panel_width) / 2
+        y = screen_rect.origin.y + (screen_rect.size.height - panel_height) / 2
 
-        # Add text input field
-        input_field = NSTextField.alloc().initWithFrame_(((0, 0), (400, 24)))
+        panel = NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+            NSMakeRect(x, y, panel_width, panel_height),
+            NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
+            NSBackingStoreBuffered,
+            False,
+        )
+        panel.setTitle_("MyCLI")
+        panel.setLevel_(NSFloatingWindowLevel)
+
+        # Set window delegate to handle close button
+        window_delegate = WindowDelegate.alloc().init()
+        panel.setDelegate_(window_delegate)
+
+        content_view = panel.contentView()
+
+        # Create input label
+        label = NSTextField.alloc().initWithFrame_(NSMakeRect(20, panel_height - 35, 460, 20))
+        label.setStringValue_("Enter command:")
+        label.setBezeled_(False)
+        label.setDrawsBackground_(False)
+        label.setEditable_(False)
+        label.setSelectable_(False)
+        content_view.addSubview_(label)
+
+        # Create input field
+        input_field = NSTextField.alloc().initWithFrame_(NSMakeRect(20, panel_height - 60, 460, 24))
         input_field.setStringValue_("")
-        alert.setAccessoryView_(input_field)
+        content_view.addSubview_(input_field)
 
-        # Make window float on top and focus the input field
-        alert.window().setLevel_(NSFloatingWindowLevel)
-        alert.window().setInitialFirstResponder_(input_field)
-        alert.window().makeKeyAndOrderFront_(None)
-        alert.window().makeFirstResponder_(input_field)
+        # Create suggestion table
+        table_height = 200
+        scroll_view = NSScrollView.alloc().initWithFrame_(
+            NSMakeRect(20, 20, 460, table_height)
+        )
+        scroll_view.setBorderType_(NSBezelBorder)
+        scroll_view.setHasVerticalScroller_(True)
 
-        # Show alert
-        print(">>> showing alert")
-        response = alert.runModal()
-        print(f">>> alert response: {response}")
+        table_view = NSTableView.alloc().initWithFrame_(
+            NSMakeRect(0, 0, 460, table_height)
+        )
 
-        # Restore focus to the previous application
-        if previous_app:
+        # Add column for app names
+        column = NSTableColumn.alloc().initWithIdentifier_("app")
+        column.setWidth_(440)
+        column.headerCell().setStringValue_("Suggestions")
+        table_view.addTableColumn_(column)
+        table_view.setHeaderView_(None)  # Hide header
+
+        scroll_view.setDocumentView_(table_view)
+        content_view.addSubview_(scroll_view)
+
+        # Create and set delegate (handles both text field and table)
+        suggestion_delegate = SuggestionDelegate.alloc().init()
+        suggestion_delegate._setup(table_view, input_field)
+        input_field.setDelegate_(suggestion_delegate)
+        table_view.setDataSource_(suggestion_delegate)
+        table_view.setDelegate_(suggestion_delegate)
+
+        # Focus input field
+        panel.makeKeyAndOrderFront_(None)
+        panel.makeFirstResponder_(input_field)
+
+        # Run modal (will stop when Enter is pressed or window closes)
+        NSApp.runModalForWindow_(panel)
+
+        # Get command after modal ends
+        command = input_field.stringValue().strip()
+        selected_app = suggestion_delegate.selected_app
+        print(f">>> command entered: '{command}', selected_app: {selected_app}")
+
+        # Handle the action
+        if selected_app:
+            # An app was selected from suggestions
+            if selected_app['is_running']:
+                print(f">>> focusing app: {selected_app['name']}")
+                focus_app(selected_app['app_obj'])
+            else:
+                print(f">>> launching app: {selected_app['path']}")
+                launch_app(selected_app['path'])
+        elif command:
+            # No app selected, treat as shell command
+            print(f">>> launching command: {command}")
+            launch_command(command)
+            save_command(command)
+            self._refresh_recent_menu()
+
+        # Close panel
+        panel.close()
+
+        # Restore focus to the previous application (only if no app action taken)
+        if previous_app and not selected_app:
             previous_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps)
-
-        if response == NSAlertFirstButtonReturn:
-            command = input_field.stringValue()
-            print(f">>> command entered: '{command}'")
-            if command and command.strip():
-                self._execute_and_notify(command.strip())
 
     def _execute_and_notify(self, command: str):
         """Execute a command, save to history, and show notification."""
