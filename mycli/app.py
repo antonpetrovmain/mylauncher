@@ -51,26 +51,13 @@ class BlockCursorTextView(NSTextView):
 
     def drawInsertionPointInRect_color_turnedOn_(self, rect, color, flag):
         """Override to draw a block cursor."""
-        if flag:
-            # Draw a filled block cursor
-            block_width = 8.0
-            block_rect = NSMakeRect(
-                rect.origin.x, rect.origin.y, block_width, rect.size.height
-            )
-            NSColor.controlTextColor().set()
-            NSRectFill(block_rect)
-        else:
-            # When cursor is "off" (blinking), still draw to prevent blinking
-            block_width = 8.0
-            block_rect = NSMakeRect(
-                rect.origin.x, rect.origin.y, block_width, rect.size.height
-            )
-            NSColor.controlTextColor().set()
-            NSRectFill(block_rect)
-
-    def setInsertionPointColor_(self, color):
-        """Override to ensure block cursor color is set."""
-        super().setInsertionPointColor_(color)
+        # Always draw the block cursor (no blinking)
+        block_width = 8.0
+        block_rect = NSMakeRect(
+            rect.origin.x, rect.origin.y, block_width, rect.size.height
+        )
+        NSColor.controlTextColor().set()
+        NSRectFill(block_rect)
 
 
 class BlockCursorPanel(NSPanel):
