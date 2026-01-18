@@ -41,7 +41,7 @@ def run_popup() -> None:
 
     root = ctk.CTk()
     root.withdraw()  # Hide window until fully configured
-    root.title("MyCLI")
+    root.title("")  # Empty title for cleaner look
 
     # Calculate centered position
     screen_width = root.winfo_screenwidth()
@@ -282,7 +282,6 @@ def run_popup() -> None:
     search_entry.bind("<Control-p>", on_arrow_up)
     search_entry.bind("<Control-n>", on_arrow_down)
     root.bind("<Escape>", on_escape)
-    root.protocol("WM_DELETE_WINDOW", root.quit)
 
     # Show window immediately (before loading apps for faster perceived startup)
     root.deiconify()
@@ -299,7 +298,10 @@ def run_popup() -> None:
 
     # Run event loop
     root.mainloop()
-    root.destroy()
+    try:
+        root.destroy()
+    except Exception:
+        pass  # Window already destroyed
 
     # Handle the result
     app = selected_app[0]
