@@ -60,8 +60,8 @@ def run_popup() -> None:
     mono_font = ctk.CTkFont(family=FONT_FAMILY, size=FONT_SIZE_TABLE)
     search_font = ctk.CTkFont(family=FONT_FAMILY, size=FONT_SIZE_INPUT)
 
-    # Mutable state
-    selected_index = [0]
+    # Mutable state (start at index 1 for quick switching to previous app)
+    selected_index = [1]
     item_buttons: list[ctk.CTkButton] = []
     current_items: list[dict] = []
     selected_app = [None]
@@ -99,18 +99,30 @@ def run_popup() -> None:
         button = item_buttons[selected_index[0]]
         items_frame.update_idletasks()
 
+        # Get the inner frame that contains all buttons
+        inner_frame = items_frame._parent_frame
         canvas = items_frame._parent_canvas
-        canvas_height = canvas.winfo_height()
-        button_y = button.winfo_y()
-        button_height = button.winfo_height()
-        scroll_top = canvas.canvasy(0)
-        scroll_bottom = scroll_top + canvas_height
-        frame_height = items_frame._parent_frame.winfo_height()
 
-        if button_y < scroll_top:
-            canvas.yview_moveto(button_y / frame_height)
-        elif button_y + button_height > scroll_bottom:
-            canvas.yview_moveto((button_y + button_height - canvas_height) / frame_height)
+        # Get actual positions
+        button_top = button.winfo_y()
+        button_bottom = button_top + button.winfo_height()
+
+        # Get visible region in canvas coordinates
+        visible_top = int(canvas.canvasy(0))
+        visible_bottom = visible_top + canvas.winfo_height()
+
+        # Get total scrollable height
+        total_height = inner_frame.winfo_reqheight()
+        if total_height <= 0:
+            return
+
+        # Scroll if button is outside visible area
+        if button_top < visible_top:
+            fraction = max(0.0, button_top / total_height)
+            canvas.yview_moveto(fraction)
+        elif button_bottom > visible_bottom:
+            fraction = max(0.0, (button_bottom - canvas.winfo_height()) / total_height)
+            canvas.yview_moveto(fraction)
 
     def update_selection_highlight() -> None:
         """Update button colors to reflect current selection."""
@@ -135,6 +147,10 @@ def run_popup() -> None:
         """Rebuild the items list with new data."""
         nonlocal current_items
         current_items = items
+
+        # Clamp selected index to valid range
+        if selected_index[0] >= len(items):
+            selected_index[0] = max(0, len(items) - 1)
 
         for btn in item_buttons:
             btn.destroy()
