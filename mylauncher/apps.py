@@ -189,9 +189,12 @@ def get_running_app_suggestions(filter_text: str = "") -> list[dict]:
     if filter_lower:
         running = [app for app in running if filter_lower in app['name'].lower()]
 
+    # Use dict for O(1) recency lookup instead of O(n) list.index()
+    recency_map = {bid: i for i, bid in enumerate(_app_history._items)}
+
     return sorted(
         running,
-        key=lambda x: (get_app_recency(x['bundle_id']), x['name'].lower())
+        key=lambda x: (recency_map.get(x['bundle_id'], 999), x['name'].lower())
     )
 
 
