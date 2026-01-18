@@ -9,8 +9,7 @@ from AppKit import NSApplicationActivateIgnoringOtherApps, NSWorkspace
 
 from .apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
 from .config import (
-    COLOR_INSTALLED,
-    COLOR_RUNNING,
+    COLOR_PALETTE,
     FONT_FAMILY,
     FONT_SIZE_INPUT,
     FONT_SIZE_TABLE,
@@ -26,13 +25,18 @@ from .history import save_command
 MAX_DISPLAY_LEN = 60
 
 
-def get_item_color(app: dict, is_selected: bool) -> tuple[str, str]:
-    """Get the background color for an item based on its state."""
+def get_item_color(index: int, is_selected: bool) -> tuple[str, str]:
+    """Get the background color for an item based on its position and selection state."""
     if is_selected:
         return SELECTED_COLOR
-    if app["is_running"]:
-        return COLOR_RUNNING
-    return COLOR_INSTALLED
+    return COLOR_PALETTE[index % len(COLOR_PALETTE)]
+
+
+def get_text_color(is_selected: bool) -> tuple[str, str]:
+    """Get the text color based on selection state."""
+    if is_selected:
+        return ("black", "black")
+    return ("gray10", "gray90")
 
 
 def run_popup() -> None:
@@ -99,35 +103,31 @@ def run_popup() -> None:
         button = item_buttons[selected_index[0]]
         items_frame.update_idletasks()
 
-        # Get the inner frame that contains all buttons
         inner_frame = items_frame._parent_frame
         canvas = items_frame._parent_canvas
 
-        # Get actual positions
         button_top = button.winfo_y()
         button_bottom = button_top + button.winfo_height()
-
-        # Get visible region in canvas coordinates
         visible_top = int(canvas.canvasy(0))
         visible_bottom = visible_top + canvas.winfo_height()
-
-        # Get total scrollable height
         total_height = inner_frame.winfo_reqheight()
+
         if total_height <= 0:
             return
 
-        # Scroll if button is outside visible area
         if button_top < visible_top:
-            fraction = max(0.0, button_top / total_height)
-            canvas.yview_moveto(fraction)
+            canvas.yview_moveto(max(0.0, button_top / total_height))
         elif button_bottom > visible_bottom:
-            fraction = max(0.0, (button_bottom - canvas.winfo_height()) / total_height)
-            canvas.yview_moveto(fraction)
+            canvas.yview_moveto(max(0.0, (button_bottom - canvas.winfo_height()) / total_height))
 
     def update_selection_highlight() -> None:
         """Update button colors to reflect current selection."""
         for i, button in enumerate(item_buttons):
-            button.configure(fg_color=get_item_color(current_items[i], i == selected_index[0]))
+            is_selected = i == selected_index[0]
+            button.configure(
+                fg_color=get_item_color(i, is_selected),
+                text_color=get_text_color(is_selected),
+            )
         scroll_to_selected()
 
     def select_item(index: int) -> None:
@@ -163,6 +163,7 @@ def run_popup() -> None:
             if len(display_name) > MAX_DISPLAY_LEN:
                 display_name = display_name[: MAX_DISPLAY_LEN - 3] + "..."
 
+            is_selected = i == selected_index[0]
             button = ctk.CTkButton(
                 items_frame,
                 text=display_name,
@@ -170,9 +171,9 @@ def run_popup() -> None:
                 font=mono_font,
                 height=ITEM_ROW_HEIGHT,
                 corner_radius=0,
-                fg_color=get_item_color(app, i == selected_index[0]),
+                fg_color=get_item_color(i, is_selected),
                 hover_color=("gray75", "gray25"),
-                text_color=("gray10", "gray90"),
+                text_color=get_text_color(is_selected),
                 command=lambda idx=i: select_item(idx),
             )
             button.grid(row=i, column=0, padx=4, pady=1, sticky="ew")

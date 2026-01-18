@@ -15,7 +15,7 @@ COMMAND_TIMEOUT_SECONDS = 10
 # UI settings
 POPUP_WIDTH = 500
 POPUP_HEIGHT = 350
-ITEM_ROW_HEIGHT = 22
+ITEM_ROW_HEIGHT = 20
 SEARCH_HEIGHT = 28
 
 # Font settings
@@ -23,7 +23,12 @@ FONT_FAMILY = "Menlo"
 FONT_SIZE_INPUT = 14
 FONT_SIZE_TABLE = 12
 
-# Colors for app list (light mode, dark mode)
-COLOR_RUNNING = ("#e8f4e8", "#1a4a2d")  # soft green for running apps
-COLOR_INSTALLED = ("#f0f0f0", "#2a2a2a")  # gray for installed apps
-SELECTED_COLOR = ("gray70", "gray30")
+# Color palette for cycling through entries (light mode, dark mode)
+COLOR_PALETTE = [
+    ("#e8f4f8", "#1a3a4a"),  # soft blue
+    ("#f0e8f8", "#2d1a4a"),  # soft purple
+    ("#e8f8e8", "#1a4a2d"),  # soft green
+    ("#f8f0e8", "#4a3a1a"),  # soft orange
+    ("#f8e8f0", "#4a1a3a"),  # soft pink
+]
+SELECTED_COLOR = ("white", "gray95")
