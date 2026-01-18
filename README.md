@@ -1,124 +1,112 @@
-# MyCLI
+# MyLauncher
 
-A lightweight command launcher for macOS that runs in the menu bar with global hotkey access to apps and shell commands.
+A lightweight app launcher for macOS that runs in the menu bar with global hotkey access.
 
 ## Features
 
 - **Menu Bar App**: Runs quietly in the menu bar with a `>_` icon
-- **Global Hotkey**: Press `Cmd+Ctrl+D` to instantly open the command popup
-- **App Suggestions**: Running apps shown first (sorted by recent usage), then installed apps
-- **Smart Sorting**: Recently used apps appear at the top of suggestions
-- **Shell Commands**: Enter any shell command to execute it in your home directory
-- **Command History**: Recent commands saved and accessible from the menu bar
-- **Keyboard Navigation**: Full support for arrow keys to navigate suggestions
-- **Focus Restoration**: Returns focus to your previous app after running a command
-
-## Requirements
-
-- macOS
-- Python 3.14+
-- Accessibility permissions (for global hotkey)
+- **Global Hotkey**: Press `Cmd+Ctrl+D` to instantly open the launcher
+- **App Switching**: Running apps shown first, sorted by recent usage
+- **App Search**: Filter apps by typing
+- **Shell Commands**: Enter any command to execute it
+- **Command History**: Recent commands accessible from menu bar
+- **Keyboard Navigation**: Arrow keys + Emacs bindings
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone <repo-url>
-   cd mycli
-   ```
+### Option 1: Download the App (Recommended)
 
-2. Create a virtual environment and install:
-   ```bash
-   python3.14 -m venv venv
-   source venv/bin/activate
-   pip install -e .
-   ```
+1. Download `MyLauncher.app` from the [Releases](../../releases) page
+2. Move it to your `Applications` folder
+3. Open the app
+4. Grant Accessibility permissions when prompted:
+   - Go to **System Settings → Privacy & Security → Accessibility**
+   - Enable **MyLauncher**
+5. Restart the app
 
-3. Grant Accessibility permissions:
-   - Open **System Settings > Privacy & Security > Accessibility**
-   - Add and enable your terminal app (e.g., Terminal, iTerm2)
+### Option 2: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/antonpetrovmain/mycli.git
+cd mycli
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -e .
+pip install pyinstaller pillow
+
+# Build the app
+./scripts/build_app.sh
+
+# Install
+cp -R dist/MyLauncher.app ~/Applications/
+```
 
 ## Usage
 
-### Start the app
+### Quick Start
 
-```bash
-source venv/bin/activate
-mycli
-```
+1. Look for `>_` in your menu bar
+2. Press **Cmd+Ctrl+D** to open the launcher
+3. Start typing to search apps
+4. Press **Enter** to launch/focus the selected app
 
-Or run directly:
-```bash
-python -m mycli
-```
+### Keyboard Shortcuts
 
-### Using the command launcher
-
-1. Press `Cmd+Ctrl+D` to open the popup (or click the `>_` menu bar icon)
-2. Start typing to filter apps, or enter a shell command
-3. Use arrow keys to navigate suggestions
-4. Press `Enter` to launch/focus the selected app or run the command
-
-### Keyboard shortcuts
-
-**Navigation:**
 | Shortcut | Action |
 |----------|--------|
-| `Cmd+Ctrl+D` | Open command popup |
-| `↑` / `Ctrl+P` | Move up in suggestions |
-| `↓` / `Ctrl+N` | Move down in suggestions |
-| `Enter` | Select item / run command |
-| `Escape` | Close popup |
-
-**Editing (search field):**
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+A` | Move to beginning |
-| `Ctrl+E` | Move to end |
+| `Cmd+Ctrl+D` | Open launcher |
+| `↑` / `Ctrl+P` | Move up |
+| `↓` / `Ctrl+N` | Move down |
+| `Enter` | Launch app / run command |
+| `Escape` | Close |
+| `Ctrl+A` | Beginning of line |
+| `Ctrl+E` | End of line |
 | `Ctrl+K` | Delete to end |
 | `Ctrl+U` | Delete to beginning |
-| `Ctrl+W` | Delete word backward |
-| `Option+Backspace` | Delete word backward |
-| `Ctrl+D` | Delete character forward |
+| `Ctrl+W` | Delete word |
 
-### Menu bar options
+### Running Shell Commands
 
-Click the `>_` icon in the menu bar to:
-- **Run Command...**: Open the command popup
-- **Recent Commands**: Quick access to command history
-- **Quit**: Exit the application
+If no app matches your search, press Enter to run it as a shell command.
+
+### Menu Bar
+
+Click `>_` in the menu bar for:
+- **Run Command...** - Open the launcher
+- **Recent Commands** - Quick access to history
+- **Quit** - Exit the app
 
 ## Auto-start on Login
 
-To have MyCLI start automatically when you log in:
-
-1. Open **System Settings > General > Login Items**
+1. Open **System Settings → General → Login Items**
 2. Click **+** under "Open at Login"
-3. Navigate to and select the MyCLI app or launch script
+3. Select **MyLauncher** from Applications
 
 ## Configuration
 
-Settings are in `mycli/config.py`:
+Edit `mycli/config.py` to customize:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `COMMAND_TIMEOUT_SECONDS` | 10 | Max time for command execution |
-| `MAX_COMMAND_HISTORY` | 100 | Maximum commands to store |
-| `MAX_APP_HISTORY` | 50 | Maximum app usage entries |
-| `POPUP_WIDTH` | 500 | Popup window width |
-| `POPUP_HEIGHT` | 300 | Popup window height |
+| `POPUP_WIDTH` | 500 | Window width |
+| `POPUP_HEIGHT` | 350 | Window height |
+| `MAX_COMMAND_HISTORY` | 100 | Commands to remember |
+| `MAX_APP_HISTORY` | 50 | App usage entries |
 
-## Data Storage
+## Data Files
 
-- Command history: `~/.mycli_history.json`
-- App usage history: `~/.mycli_app_history.json`
+- `~/.mycli_history.json` - Command history
+- `~/.mycli_app_history.json` - App usage history
 
-## Dependencies
+## Requirements
 
-- `rumps`: Menu bar app framework
-- `pyobjc-framework-Quartz`: For CGEventTap hotkey capture
-- `pyobjc-framework-Cocoa`: For native macOS UI components
-- `desktop-notifier`: Cross-platform notifications
+- macOS 10.15+
+- Accessibility permissions (for global hotkey)
 
 ## License
 
