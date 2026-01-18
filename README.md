@@ -28,8 +28,8 @@ A lightweight app launcher for macOS that runs in the menu bar with global hotke
 
 ```bash
 # Clone the repository
-git clone https://github.com/antonpetrovmain/mycli.git
-cd mycli
+git clone https://github.com/antonpetrovmain/mylauncher.git
+cd mylauncher
 
 # Create virtual environment
 python3 -m venv venv
@@ -89,7 +89,7 @@ Click `>_` in the menu bar for:
 
 ## Configuration
 
-Edit `mycli/config.py` to customize:
+Edit `mylauncher/config.py` to customize:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -100,8 +100,8 @@ Edit `mycli/config.py` to customize:
 
 ## Data Files
 
-- `~/.mycli_history.json` - Command history
-- `~/.mycli_app_history.json` - App usage history
+- `~/.mylauncher_history.json` - Command history
+- `~/.mylauncher_app_history.json` - App usage history
 
 ## Requirements
 

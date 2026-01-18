@@ -1,4 +1,4 @@
-"""Main rumps application for MyCLI."""
+"""Main rumps application for MyLauncher."""
 
 from __future__ import annotations
 
@@ -15,12 +15,12 @@ from .notifier import notify_failure, notify_success
 from .popup import run_popup
 
 
-class MyCLIApp(rumps.App):
-    """Menu bar application for MyCLI command launcher."""
+class MyLauncherApp(rumps.App):
+    """Menu bar application for MyLauncher command launcher."""
 
     def __init__(self):
         super().__init__(
-            name="MyCLI",
+            name="MyLauncher",
             title=">_",
             quit_button=None,
         )
@@ -113,7 +113,7 @@ class MyCLIApp(rumps.App):
 
 
 def main():
-    """Entry point for MyCLI application."""
+    """Entry point for MyLauncher application."""
     # Required for PyInstaller multiprocessing support
     multiprocessing.freeze_support()
     multiprocessing.set_start_method('spawn', force=True)
@@ -125,7 +125,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    app = MyCLIApp()
+    app = MyLauncherApp()
 
     timer = rumps.Timer(lambda _: None, 1)
     timer.start()

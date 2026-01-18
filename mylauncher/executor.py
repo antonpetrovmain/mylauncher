@@ -1,4 +1,4 @@
-"""Command execution logic for MyCLI."""
+"""Command execution logic for MyLauncher."""
 
 from __future__ import annotations
 

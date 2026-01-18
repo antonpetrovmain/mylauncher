@@ -13,9 +13,9 @@ MyLauncher is a macOS menu bar application that provides an app launcher and com
 pip install -e .
 
 # Run the application
-python -m mycli
+python -m mylauncher
 # or after install:
-mycli
+mylauncher
 
 # Build macOS .app bundle (requires pyinstaller, pillow)
 pip install pyinstaller pillow
@@ -32,12 +32,12 @@ The application uses `rumps` for the menu bar interface combined with PyObjC for
 
 ### Module Responsibilities
 
-- **app.py**: Main `rumps.App` subclass (`MyCLIApp`). Creates the menu bar icon, builds menus, spawns popup process, and handles command execution with notifications.
+- **app.py**: Main `rumps.App` subclass (`MyLauncherApp`). Creates the menu bar icon, builds menus, spawns popup process, and handles command execution with notifications.
 - **popup.py**: CustomTkinter-based popup window with app list and search. Runs in a separate process; communicates result back via `multiprocessing.Queue`.
 - **apps.py**: App discovery using `NSWorkspace`. `AppHistory` tracks usage for sorting. `get_apps()` returns running apps first, then installed apps from /Applications.
 - **executor.py**: Runs shell commands via subprocess in a new session group. Sources `~/.zshrc` for PATH, has 10-second timeout, and kills process groups on timeout.
 - **hotkey.py**: Global hotkey (Cmd+Ctrl+D) using `CGEventTap`. Runs in a background thread and calls back to the main thread via `AppHelper.callAfter`.
-- **history.py**: JSON-based command history stored at `~/.mycli_history.json`. Maintains up to 100 commands, deduplicates entries.
+- **history.py**: JSON-based command history stored at `~/.mylauncher_history.json`. Maintains up to 100 commands, deduplicates entries.
 - **notifier.py**: Async wrapper around `desktop-notifier` for success/failure notifications.
 - **config.py**: All constants (dimensions, timeouts, colors, file paths).
 

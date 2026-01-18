@@ -1,4 +1,4 @@
-"""App discovery and management for MyCLI."""
+"""App discovery and management for MyLauncher."""
 
 from __future__ import annotations
 
@@ -173,12 +173,31 @@ def get_installed_apps(use_cache: bool = True) -> list[dict]:
     return apps
 
 
-def get_app_suggestions(filter_text: str = "") -> list[dict]:
+def get_running_app_suggestions(filter_text: str = "") -> list[dict]:
     """
-    Get combined list of apps: running apps first, then installed.
+    Get running apps only, sorted by recency.
 
-    Filters by case-insensitive substring match on app name.
-    Running apps are prioritized and shown first, sorted by recency.
+    Args:
+        filter_text: Optional text to filter app names
+
+    Returns:
+        List of running app dicts sorted by recency
+    """
+    running = get_running_apps()
+    filter_lower = filter_text.lower() if filter_text else ""
+
+    if filter_lower:
+        running = [app for app in running if filter_lower in app['name'].lower()]
+
+    return sorted(
+        running,
+        key=lambda x: (get_app_recency(x['bundle_id']), x['name'].lower())
+    )
+
+
+def get_all_app_suggestions(filter_text: str = "") -> list[dict]:
+    """
+    Get all apps: running first, then installed.
 
     Args:
         filter_text: Optional text to filter app names
@@ -187,13 +206,9 @@ def get_app_suggestions(filter_text: str = "") -> list[dict]:
         List of app dicts, running apps first, then installed
     """
     running = get_running_apps()
-    installed = get_installed_apps()  # Already sorted alphabetically from cache
+    installed = get_installed_apps()
 
-    # Track running app names to avoid duplicates
     running_names = {app['name'].lower() for app in running}
-
-    # Filter and apply search in one pass for installed apps
-    # (installed is already sorted, so we preserve order)
     filter_lower = filter_text.lower() if filter_text else ""
 
     if filter_lower:
@@ -212,7 +227,6 @@ def get_app_suggestions(filter_text: str = "") -> list[dict]:
         ]
         running_filtered = running
 
-    # Sort only running apps by recency (installed already sorted from cache)
     running_sorted = sorted(
         running_filtered,
         key=lambda x: (get_app_recency(x['bundle_id']), x['name'].lower())

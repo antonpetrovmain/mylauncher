@@ -1,4 +1,4 @@
-"""Command history management for MyCLI."""
+"""Command history management for MyLauncher."""
 
 from __future__ import annotations
 

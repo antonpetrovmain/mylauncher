@@ -1,4 +1,4 @@
-"""Notification wrapper for MyCLI using desktop-notifier."""
+"""Notification wrapper for MyLauncher using desktop-notifier."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from desktop_notifier import DesktopNotifier
 # Suppress desktop-notifier warnings
 logging.getLogger("desktop_notifier").setLevel(logging.ERROR)
 
-notifier = DesktopNotifier(app_name="MyCLI")
+notifier = DesktopNotifier(app_name="MyLauncher")
 
 
 def _truncate(text: str, max_length: int = 200) -> str:

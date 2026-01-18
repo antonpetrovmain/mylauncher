@@ -1,11 +1,11 @@
-"""Configuration constants for MyCLI."""
+"""Configuration constants for MyLauncher."""
 
 from pathlib import Path
 
 # History settings
-COMMAND_HISTORY_FILE = Path.home() / ".mycli_history.json"
+COMMAND_HISTORY_FILE = Path.home() / ".mylauncher_history.json"
 MAX_COMMAND_HISTORY = 100
-APP_HISTORY_FILE = Path.home() / ".mycli_app_history.json"
+APP_HISTORY_FILE = Path.home() / ".mylauncher_app_history.json"
 MAX_APP_HISTORY = 50
 
 # Execution settings

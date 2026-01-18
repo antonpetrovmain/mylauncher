@@ -7,7 +7,13 @@ import time
 import customtkinter as ctk
 from AppKit import NSApplicationActivateIgnoringOtherApps, NSWorkspace
 
-from .apps import focus_app, get_app_suggestions, launch_app, save_app_to_history
+from .apps import (
+    focus_app,
+    get_all_app_suggestions,
+    get_running_app_suggestions,
+    launch_app,
+    save_app_to_history,
+)
 from .config import (
     COLOR_PALETTE,
     DEFAULT_TEXT,
@@ -61,7 +67,7 @@ def run_popup() -> None:
     search_entry = ctk.CTkEntry(
         root,
         textvariable=search_var,
-        placeholder_text="Search apps or enter command...",
+        placeholder_text="Switch app, @search all, or run command...",
         height=SEARCH_HEIGHT,
         font=search_font,
     )
@@ -128,8 +134,8 @@ def run_popup() -> None:
 
         for i, app in enumerate(new_items):
             name = app["name"]
-            if app["is_running"]:
-                name = f"{name}  (running)"
+            if not app["is_running"]:
+                name = f"{name}  (not running)"
             if len(name) > MAX_DISPLAY_LEN:
                 name = name[: MAX_DISPLAY_LEN - 3] + "..."
 
@@ -155,9 +161,15 @@ def run_popup() -> None:
             previous_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps)
 
     # Event handlers
+    def get_suggestions(text: str) -> list[dict]:
+        """Get app suggestions based on search text. Use @ prefix for all apps."""
+        if text.startswith("@"):
+            return get_all_app_suggestions(text[1:])
+        return get_running_app_suggestions(text)
+
     def on_search(*_):
         selected_idx[0] = 0
-        update_list(get_app_suggestions(search_var.get()))
+        update_list(get_suggestions(search_var.get()))
 
     def on_enter(_):
         if items and selected_idx[0] < len(items):
@@ -238,7 +250,7 @@ def run_popup() -> None:
     root.lift()
     root.focus_force()
     search_entry.focus_set()
-    root.after(1, lambda: update_list(get_app_suggestions("")))
+    root.after(1, lambda: update_list(get_running_app_suggestions("")))
 
     root.mainloop()
     try:
