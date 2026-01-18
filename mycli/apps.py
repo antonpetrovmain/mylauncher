@@ -137,8 +137,9 @@ def get_installed_apps(use_cache: bool = True) -> list[dict]:
     apps = []
     seen_names = set()
 
-    # Search both system and user Applications folders
+    # Search system and user Applications folders
     app_dirs = [
+        Path('/System/Applications'),
         Path('/Applications'),
         Path.home() / 'Applications',
     ]
