@@ -27,10 +27,13 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+# Keep MyLauncher.spec in version control
+!MyLauncher.spec
+
+# Generated icons (keep .icns)
+resources/iconset/
+resources/icon.png
 
 # Installer logs
 pip-log.txt
