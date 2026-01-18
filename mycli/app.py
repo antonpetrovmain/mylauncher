@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import signal
-import subprocess
-import sys
 import threading
 
 import rumps
@@ -13,6 +11,7 @@ from .executor import execute_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
+from .popup import run_popup
 
 
 class MyCLIApp(rumps.App):
@@ -26,7 +25,7 @@ class MyCLIApp(rumps.App):
         )
         self._build_menu()
         self._popup_lock = threading.Lock()
-        self._popup_process: subprocess.Popen | None = None
+        self._popup_running = False
         register_hotkey(self.show_command_popup)
 
     def _build_menu(self):
@@ -50,7 +49,6 @@ class MyCLIApp(rumps.App):
             recent_menu.add(no_history)
         else:
             for cmd in recent_commands:
-                # Truncate long commands for display
                 display_cmd = cmd if len(cmd) <= 40 else cmd[:37] + "..."
                 item = rumps.MenuItem(display_cmd, callback=self._make_history_callback(cmd))
                 recent_menu.add(item)
@@ -65,15 +63,11 @@ class MyCLIApp(rumps.App):
 
     def _refresh_recent_menu(self):
         """Refresh the Recent Commands submenu."""
-        # Remove old Recent Commands menu
         if "Recent Commands" in self.menu:
             del self.menu["Recent Commands"]
 
-        # Find the position after "Run Command..." and separator
-        # Insert new Recent Commands menu
         new_recent = self._build_recent_menu()
 
-        # Rebuild menu to maintain order
         self.menu.clear()
         self.menu = [
             rumps.MenuItem("Run Command...", callback=self.show_command_popup),
@@ -84,24 +78,23 @@ class MyCLIApp(rumps.App):
         ]
 
     def show_command_popup(self, _=None):
-        """Show the command input popup in a subprocess."""
+        """Show the command input popup."""
         with self._popup_lock:
-            # Skip if popup is already running
-            if self._popup_process is not None and self._popup_process.poll() is None:
+            if self._popup_running:
                 return
-            # Launch popup in background thread
-            thread = threading.Thread(target=self._launch_popup_process, daemon=True)
-            thread.start()
+            self._popup_running = True
 
-    def _launch_popup_process(self):
-        """Launch the popup window as a subprocess."""
-        with self._popup_lock:
-            self._popup_process = subprocess.Popen(
-                [sys.executable, "-m", "mycli.popup"]
-            )
-        self._popup_process.wait()
-        # Refresh menu after popup closes (command may have been run)
-        self._refresh_recent_menu()
+        thread = threading.Thread(target=self._run_popup, daemon=True)
+        thread.start()
+
+    def _run_popup(self):
+        """Run the popup window in a thread."""
+        try:
+            run_popup()
+        finally:
+            with self._popup_lock:
+                self._popup_running = False
+            self._refresh_recent_menu()
 
     def _execute_and_notify(self, command: str):
         """Execute a command, save to history, and show notification."""
@@ -121,7 +114,6 @@ class MyCLIApp(rumps.App):
 
 def main():
     """Entry point for MyCLI application."""
-    # Handle Ctrl+C gracefully
     def signal_handler(*args):
         print("\nQuitting...")
         rumps.quit_application()
@@ -131,7 +123,6 @@ def main():
 
     app = MyCLIApp()
 
-    # Timer to allow Python to process signals
     timer = rumps.Timer(lambda _: None, 1)
     timer.start()
 
