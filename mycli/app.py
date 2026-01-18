@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import multiprocessing
 import signal
 import threading
 
@@ -25,7 +26,7 @@ class MyCLIApp(rumps.App):
         )
         self._build_menu()
         self._popup_lock = threading.Lock()
-        self._popup_running = False
+        self._popup_process = None
         register_hotkey(self.show_command_popup)
 
     def _build_menu(self):
@@ -80,20 +81,19 @@ class MyCLIApp(rumps.App):
     def show_command_popup(self, _=None):
         """Show the command input popup."""
         with self._popup_lock:
-            if self._popup_running:
+            if self._popup_process is not None and self._popup_process.is_alive():
                 return
-            self._popup_running = True
+            self._popup_process = multiprocessing.Process(target=run_popup)
+            self._popup_process.start()
 
-        thread = threading.Thread(target=self._run_popup, daemon=True)
+        # Monitor process completion in background thread
+        thread = threading.Thread(target=self._wait_for_popup, daemon=True)
         thread.start()
 
-    def _run_popup(self):
-        """Run the popup window in a thread."""
-        try:
-            run_popup()
-        finally:
-            with self._popup_lock:
-                self._popup_running = False
+    def _wait_for_popup(self):
+        """Wait for popup process to finish."""
+        if self._popup_process:
+            self._popup_process.join()
             self._refresh_recent_menu()
 
     def _execute_and_notify(self, command: str):
@@ -114,6 +114,10 @@ class MyCLIApp(rumps.App):
 
 def main():
     """Entry point for MyCLI application."""
+    # Required for PyInstaller multiprocessing support
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method('spawn', force=True)
+
     def signal_handler(*args):
         print("\nQuitting...")
         rumps.quit_application()
