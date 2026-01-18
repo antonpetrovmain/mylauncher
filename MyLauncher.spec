@@ -5,18 +5,21 @@ import os
 import sys
 from pathlib import Path
 
-# Get customtkinter path for including assets
+# Get package paths for including assets
 import customtkinter
+import desktop_notifier
 ctk_path = Path(customtkinter.__file__).parent
+dn_path = Path(desktop_notifier.__file__).parent
 
 block_cipher = None
 
 a = Analysis(
-    ['mycli/app.py'],
+    ['launcher.py'],
     pathex=[],
     binaries=[],
     datas=[
-        (str(ctk_path), 'customtkinter'),  # Include customtkinter assets
+        (str(ctk_path), 'customtkinter'),
+        (str(dn_path), 'desktop_notifier'),
     ],
     hiddenimports=[
         'mycli',
