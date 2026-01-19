@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import multiprocessing
+from multiprocessing import Queue
+from typing import Any
+
 import customtkinter as ctk
 
 # Lazy imports for faster startup - these are loaded after window is visible
@@ -122,10 +126,16 @@ def run_popup() -> None:
             )
         scroll_to_selected()
 
+    def close_popup():
+        """Hide window immediately and exit mainloop."""
+        root.withdraw()
+        # Schedule destroy on next tick to ensure clean exit
+        root.after(1, root.destroy)
+
     def select(idx: int):
         if 0 <= idx < len(items):
             result_app[0] = items[idx]
-            root.quit()
+            close_popup()
 
     def run_command():
         cmd = search_var.get().strip()
@@ -133,7 +143,7 @@ def run_popup() -> None:
             cmd = cmd[1:].strip()  # Strip ">" prefix
         if cmd:
             result_cmd[0] = cmd
-            root.quit()
+            close_popup()
 
     def update_list(new_items: list[dict]):
         nonlocal items
@@ -271,7 +281,7 @@ def run_popup() -> None:
     search_var.trace_add("write", on_search)
     for key, handler in [
         ("<Return>", on_enter),
-        ("<Escape>", lambda _: root.quit()),
+        ("<Escape>", lambda _: close_popup()),
         ("<Up>", on_up),
         ("<Down>", on_down),
         ("<Command-BackSpace>", on_clear),
@@ -286,7 +296,7 @@ def run_popup() -> None:
         ("<Control-n>", on_down),
     ]:
         search_entry.bind(key, handler)
-    root.bind("<Escape>", lambda _: root.quit())
+    root.bind("<Escape>", lambda _: close_popup())
 
     # Show window immediately - user can start typing right away
     root.deiconify()
@@ -311,11 +321,10 @@ def run_popup() -> None:
     # Schedule heavy loading after window is visible
     root.after(1, load_apps_async)
 
-    root.mainloop()
     try:
-        root.destroy()
+        root.mainloop()
     except Exception:
-        pass
+        pass  # Window was destroyed, mainloop exited
 
     # Handle result
     if result_app[0]:
@@ -334,6 +343,43 @@ def run_popup() -> None:
         restore_focus()
     else:
         restore_focus()
+
+
+def popup_worker(command_queue: Queue, result_queue: Queue) -> None:
+    """
+    Worker process that keeps running and waits for show commands.
+
+    This eliminates the ~500ms spawn delay by keeping the process warm.
+    The process waits on command_queue for "show" commands, displays
+    the popup, and sends results back via result_queue.
+    """
+    # Initialize Tkinter once - this is the expensive part we're avoiding
+    ctk.set_appearance_mode("system")
+
+    # Pre-import heavy modules during startup
+    _get_appkit()
+    _get_apps_module()
+
+    while True:
+        try:
+            # Wait for show command
+            cmd = command_queue.get()
+
+            if cmd == "quit":
+                break
+
+            if cmd == "show":
+                # Run the popup and capture any result
+                run_popup()
+                # Signal completion
+                result_queue.put("done")
+        except (EOFError, BrokenPipeError):
+            # Parent process closed the queue
+            break
+        except Exception as e:
+            # Log error but keep running
+            print(f"Popup worker error: {e}")
+            result_queue.put("error")
 
 
 if __name__ == "__main__":

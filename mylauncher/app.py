@@ -16,7 +16,7 @@ from .executor import execute_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
-from .popup import run_popup
+from .popup import popup_worker
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,19 @@ class MyLauncherApp(rumps.App):
         )
         self._build_menu()
         self._popup_lock = threading.Lock()
-        self._popup_process = None
+        self._popup_showing = False
+
+        # Start pre-warmed popup worker process
+        self._command_queue = multiprocessing.Queue()
+        self._result_queue = multiprocessing.Queue()
+        self._popup_process = multiprocessing.Process(
+            target=popup_worker,
+            args=(self._command_queue, self._result_queue),
+            daemon=True,
+        )
+        self._popup_process.start()
+        log.info("Popup worker process started (pre-warmed)")
+
         register_hotkey(self.show_command_popup)
 
     def _build_menu(self):
@@ -132,19 +144,27 @@ class MyLauncherApp(rumps.App):
     def show_command_popup(self, _=None):
         """Show the command input popup."""
         with self._popup_lock:
-            if self._popup_process is not None and self._popup_process.is_alive():
+            if self._popup_showing:
                 return
-            self._popup_process = multiprocessing.Process(target=run_popup)
-            self._popup_process.start()
+            self._popup_showing = True
 
-        # Monitor process completion in background thread
+        # Send show command to pre-warmed worker (instant, no spawn delay)
+        self._command_queue.put("show")
+
+        # Monitor completion in background thread
         thread = threading.Thread(target=self._wait_for_popup, daemon=True)
         thread.start()
 
     def _wait_for_popup(self):
-        """Wait for popup process to finish."""
-        if self._popup_process:
-            self._popup_process.join()
+        """Wait for popup to finish and refresh menu."""
+        try:
+            # Wait for result from worker
+            self._result_queue.get(timeout=60)
+        except Exception:
+            pass
+        finally:
+            with self._popup_lock:
+                self._popup_showing = False
             self._refresh_recent_menu()
 
     def _execute_and_notify(self, command: str):

@@ -98,9 +98,9 @@ class HotkeyManager:
         # Enable the tap
         Quartz.CGEventTapEnable(self._tap, True)
 
-        # Run the loop
+        # Run the loop (0.1s timeout for better stop() responsiveness)
         while self._running:
-            Quartz.CFRunLoopRunInMode(Quartz.kCFRunLoopDefaultMode, 0.5, False)
+            Quartz.CFRunLoopRunInMode(Quartz.kCFRunLoopDefaultMode, 0.1, False)
 
 
 _manager: Optional[HotkeyManager] = None
