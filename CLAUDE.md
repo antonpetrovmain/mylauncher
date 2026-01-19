@@ -33,9 +33,9 @@ The application uses `rumps` for the menu bar interface combined with PyObjC for
 ### Module Responsibilities
 
 - **app.py**: Main `rumps.App` subclass (`MyLauncherApp`). Creates the menu bar icon, builds menus, spawns popup process, and handles command execution with notifications.
-- **popup.py**: CustomTkinter-based popup window with app list and search. Runs in a separate process; communicates result back via `multiprocessing.Queue`.
+- **popup.py**: CustomTkinter-based popup window with app list and search. Runs in a separate process. Supports `@` prefix for all apps, `>` prefix for command mode.
 - **apps.py**: App discovery using `NSWorkspace`. `AppHistory` tracks usage for sorting (stored at `~/.mylauncher_app_history.json`). Returns running apps first (sorted by recency), then installed apps from /System/Applications, /Applications, and ~/Applications.
-- **executor.py**: Runs shell commands via subprocess in a new session group. Sources `~/.zshrc` for PATH, has 10-second timeout, and kills process groups on timeout.
+- **executor.py**: Runs shell commands via subprocess in a new session group. Sources `~/.zprofile` and `~/.zshrc` for PATH (supports Homebrew), has 10-second timeout, and kills process groups on timeout.
 - **hotkey.py**: Global hotkey (Cmd+Ctrl+D) using `CGEventTap`. Runs in a background thread and calls back to the main thread via `AppHelper.callAfter`.
 - **history.py**: JSON-based command history stored at `~/.mylauncher_history.json`. Maintains up to 100 commands, deduplicates entries.
 - **notifier.py**: Async wrapper around `desktop-notifier` for success/failure notifications.
