@@ -29,8 +29,8 @@ def launch_command(command: str) -> None:
     """
     home_dir = Path.home()
 
-    # Source .zshrc to get PATH, then run command
-    shell_command = f'source ~/.zshrc 2>/dev/null; {command}'
+    # Source shell config files to get PATH (Homebrew uses .zprofile)
+    shell_command = f'source ~/.zprofile 2>/dev/null; source ~/.zshrc 2>/dev/null; {command}'
     subprocess.Popen(
         ["/bin/zsh", "-c", shell_command],
         cwd=home_dir,
@@ -56,9 +56,9 @@ def execute_command(command: str, timeout: int | None = COMMAND_TIMEOUT_SECONDS)
 
     process = None
     try:
-        # Source .zshrc to get PATH, then run command
+        # Source shell config files to get PATH (Homebrew uses .zprofile)
         # Using non-interactive shell to avoid hanging on interactive apps
-        shell_command = f'source ~/.zshrc 2>/dev/null; {command}'
+        shell_command = f'source ~/.zprofile 2>/dev/null; source ~/.zshrc 2>/dev/null; {command}'
         process = subprocess.Popen(
             ["/bin/zsh", "-c", shell_command],
             cwd=home_dir,
