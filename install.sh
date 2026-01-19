@@ -44,16 +44,16 @@ fi
 # Remove old version if exists
 if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
     echo "Removing old version..."
-    rm -rf "$INSTALL_DIR/$APP_NAME.app"
+    sudo rm -rf "$INSTALL_DIR/$APP_NAME.app"
 fi
 
 # Move to /Applications
 echo "Installing to $INSTALL_DIR..."
-mv "$APP_PATH" "$INSTALL_DIR/$APP_NAME.app"
+sudo mv "$APP_PATH" "$INSTALL_DIR/$APP_NAME.app"
 
 # Remove quarantine attribute
 echo "Removing quarantine..."
-xattr -cr "$INSTALL_DIR/$APP_NAME.app"
+sudo xattr -cr "$INSTALL_DIR/$APP_NAME.app"
 
 echo ""
 echo "Installation complete!"
