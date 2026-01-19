@@ -2,18 +2,30 @@
 
 from __future__ import annotations
 
-import time
-
 import customtkinter as ctk
-from AppKit import NSApplicationActivateIgnoringOtherApps, NSWorkspace
 
-from .apps import (
-    focus_app,
-    get_all_app_suggestions,
-    get_running_app_suggestions,
-    launch_app,
-    save_app_to_history,
-)
+# Lazy imports for faster startup - these are loaded after window is visible
+_apps_module = None
+_appkit_module = None
+
+
+def _get_apps_module():
+    """Lazy load apps module."""
+    global _apps_module
+    if _apps_module is None:
+        from . import apps as _apps_module
+    return _apps_module
+
+
+def _get_appkit():
+    """Lazy load AppKit."""
+    global _appkit_module
+    if _appkit_module is None:
+        import AppKit as _appkit_module
+    return _appkit_module
+
+
+# Config imports are lightweight, keep them
 from .config import (
     COLOR_PALETTE,
     DEFAULT_TEXT,
@@ -29,14 +41,12 @@ from .config import (
     SELECTED_BG,
     SELECTED_TEXT,
 )
-from .executor import launch_command
-from .history import save_command
 
 
 def run_popup() -> None:
     """Run the popup window."""
-    workspace = NSWorkspace.sharedWorkspace()
-    previous_app = workspace.frontmostApplication()
+    # Defer AppKit import - capture previous app later
+    previous_app = [None]
 
     ctk.set_appearance_mode("system")
 
@@ -61,6 +71,7 @@ def run_popup() -> None:
     items: list[dict] = []
     result_app = [None]
     result_cmd = [None]
+    apps_loaded = [False]
 
     # Search entry
     search_var = ctk.StringVar()
@@ -181,18 +192,23 @@ def run_popup() -> None:
             buttons.append(btn)
 
     def restore_focus():
-        if previous_app:
+        import time
+        if previous_app[0]:
             time.sleep(0.1)
-            previous_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps)
+            AppKit = _get_appkit()
+            previous_app[0].activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
 
     # Event handlers
     def get_suggestions(text: str) -> list[dict]:
         """Get app suggestions based on search text. Use @ prefix for all apps, > for command mode."""
         if text.startswith(">"):
             return []  # Command mode - disable app list
+        if not apps_loaded[0]:
+            return []  # Apps not loaded yet
+        apps = _get_apps_module()
         if text.startswith("@"):
-            return get_all_app_suggestions(text[1:])
-        return get_running_app_suggestions(text)
+            return apps.get_all_app_suggestions(text[1:])
+        return apps.get_running_app_suggestions(text)
 
     def on_search(*_):
         selected_idx[0] = 0
@@ -272,12 +288,28 @@ def run_popup() -> None:
         search_entry.bind(key, handler)
     root.bind("<Escape>", lambda _: root.quit())
 
-    # Show window
+    # Show window immediately - user can start typing right away
     root.deiconify()
     root.lift()
     root.focus_force()
     search_entry.focus_set()
-    root.after(1, lambda: update_list(get_running_app_suggestions("")))
+
+    def load_apps_async():
+        """Load apps and previous app reference in background."""
+        # Capture previous app (needs AppKit)
+        AppKit = _get_appkit()
+        workspace = AppKit.NSWorkspace.sharedWorkspace()
+        previous_app[0] = workspace.frontmostApplication()
+
+        # Load apps module and populate list
+        apps_loaded[0] = True
+        # Only update if user hasn't typed anything yet
+        if not search_var.get():
+            apps = _get_apps_module()
+            update_list(apps.get_running_app_suggestions(""))
+
+    # Schedule heavy loading after window is visible
+    root.after(1, load_apps_async)
 
     root.mainloop()
     try:
@@ -288,12 +320,15 @@ def run_popup() -> None:
     # Handle result
     if result_app[0]:
         app = result_app[0]
-        save_app_to_history(app.get("bundle_id") or app["name"])
+        apps = _get_apps_module()
+        apps.save_app_to_history(app.get("bundle_id") or app["name"])
         if app["is_running"]:
-            focus_app(app["app_obj"])
+            apps.focus_app(app["app_obj"])
         else:
-            launch_app(app["path"])
+            apps.launch_app(app["path"])
     elif result_cmd[0]:
+        from .executor import launch_command
+        from .history import save_command
         launch_command(result_cmd[0])
         save_command(result_cmd[0])
         restore_focus()
