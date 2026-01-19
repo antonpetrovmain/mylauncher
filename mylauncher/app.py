@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import multiprocessing
 import signal
+import subprocess
+import sys
 import threading
+from pathlib import Path
 
 import rumps
 
@@ -13,6 +17,45 @@ from .history import get_recent, save_command
 from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
 from .popup import run_popup
+
+log = logging.getLogger(__name__)
+
+LOG_PATH = Path.home() / "Library/Logs/MyLauncher.log"
+
+
+def get_app_version() -> str:
+    """Get the app version from Info.plist (bundled), package metadata, or __version__."""
+    # Try bundled app Info.plist first
+    try:
+        if getattr(sys, "frozen", False):
+            app_path = Path(sys.executable).parent.parent
+            plist_path = app_path / "Info.plist"
+            if plist_path.exists():
+                result = subprocess.run(
+                    ["defaults", "read", str(plist_path), "CFBundleShortVersionString"],
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
+    except Exception:
+        pass
+
+    # Try importlib.metadata (installed package)
+    try:
+        from importlib.metadata import version
+        return version("mylauncher")
+    except Exception:
+        pass
+
+    # Fall back to __version__ in package
+    try:
+        from . import __version__
+        return __version__
+    except Exception:
+        pass
+
+    return "dev"
 
 
 class MyLauncherApp(rumps.App):
@@ -31,7 +74,11 @@ class MyLauncherApp(rumps.App):
 
     def _build_menu(self):
         """Build the menu bar menu."""
+        version_item = rumps.MenuItem(f"MyLauncher v{get_app_version()}")
+        version_item.set_callback(None)  # Disabled
         self.menu = [
+            version_item,
+            None,  # Separator
             rumps.MenuItem("Run Command...", callback=self.show_command_popup),
             None,  # Separator
             self._build_recent_menu(),
@@ -68,9 +115,13 @@ class MyLauncherApp(rumps.App):
             del self.menu["Recent Commands"]
 
         new_recent = self._build_recent_menu()
+        version_item = rumps.MenuItem(f"MyLauncher v{get_app_version()}")
+        version_item.set_callback(None)
 
         self.menu.clear()
         self.menu = [
+            version_item,
+            None,
             rumps.MenuItem("Run Command...", callback=self.show_command_popup),
             None,
             new_recent,
@@ -114,12 +165,26 @@ class MyLauncherApp(rumps.App):
 
 def main():
     """Entry point for MyLauncher application."""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+        handlers=[
+            logging.FileHandler(LOG_PATH),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+
+    version = get_app_version()
+    log.info(f"MyLauncher v{version} starting...")
+
     # Required for PyInstaller multiprocessing support
     multiprocessing.freeze_support()
     multiprocessing.set_start_method('spawn', force=True)
 
     def signal_handler(*args):
-        print("\nQuitting...")
+        log.info("Quitting...")
         rumps.quit_application()
 
     signal.signal(signal.SIGINT, signal_handler)
