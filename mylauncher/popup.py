@@ -67,7 +67,7 @@ def run_popup() -> None:
     search_entry = ctk.CTkEntry(
         root,
         textvariable=search_var,
-        placeholder_text="Switch app, @search all, or run command...",
+        placeholder_text="Switch app, @all apps, >command...",
         height=SEARCH_HEIGHT,
         font=search_font,
     )
@@ -118,6 +118,8 @@ def run_popup() -> None:
 
     def run_command():
         cmd = search_var.get().strip()
+        if cmd.startswith(">"):
+            cmd = cmd[1:].strip()  # Strip ">" prefix
         if cmd:
             result_cmd[0] = cmd
             root.quit()
@@ -131,6 +133,29 @@ def run_popup() -> None:
         for btn in buttons:
             btn.destroy()
         buttons.clear()
+
+        # Command mode: show "Run command" indicator
+        text = search_var.get()
+        if not new_items and text.startswith(">"):
+            cmd = text[1:].strip()
+            display = f"⏎ Run: {cmd}" if cmd else "⏎ Run command..."
+            if len(display) > MAX_DISPLAY_LEN:
+                display = display[: MAX_DISPLAY_LEN - 3] + "..."
+            btn = ctk.CTkButton(
+                items_frame,
+                text=display,
+                anchor="w",
+                font=mono_font,
+                height=ITEM_ROW_HEIGHT,
+                corner_radius=0,
+                fg_color=COLOR_PALETTE[0],
+                hover_color=HOVER_COLOR,
+                text_color=DEFAULT_TEXT,
+                state="disabled",
+            )
+            btn.grid(row=0, column=0, padx=4, pady=1, sticky="ew")
+            buttons.append(btn)
+            return
 
         for i, app in enumerate(new_items):
             name = app["name"]
@@ -162,7 +187,9 @@ def run_popup() -> None:
 
     # Event handlers
     def get_suggestions(text: str) -> list[dict]:
-        """Get app suggestions based on search text. Use @ prefix for all apps."""
+        """Get app suggestions based on search text. Use @ prefix for all apps, > for command mode."""
+        if text.startswith(">"):
+            return []  # Command mode - disable app list
         if text.startswith("@"):
             return get_all_app_suggestions(text[1:])
         return get_running_app_suggestions(text)
