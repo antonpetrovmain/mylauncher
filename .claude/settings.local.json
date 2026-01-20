@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C /Users/ANTPE/source/mylauncher log --oneline -5)"
+      "Bash(git -C /Users/ANTPE/source/mylauncher log --oneline -5)",
+      "Bash(./scripts/build_app.sh:*)"
     ]
   }
 }

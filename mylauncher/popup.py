@@ -129,8 +129,20 @@ def run_popup() -> None:
     def close_popup():
         """Hide window immediately and exit mainloop."""
         root.withdraw()
+        # Destroy buttons explicitly to prevent Tk cleanup crash
+        for btn in buttons:
+            try:
+                btn.destroy()
+            except Exception:
+                pass
+        buttons.clear()
         # Schedule destroy on next tick to ensure clean exit
-        root.after(1, root.destroy)
+        def safe_destroy():
+            try:
+                root.destroy()
+            except Exception:
+                pass
+        root.after(1, safe_destroy)
 
     def select(idx: int):
         if 0 <= idx < len(items):
