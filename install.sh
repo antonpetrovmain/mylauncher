@@ -18,13 +18,26 @@ for arg in "$@"; do
 done
 
 APP_NAME="MyLauncher"
-INSTALL_DIR="$HOME/Applications"
+INSTALL_DIR="/Applications"
 REPO="antonpetrovmain/mylauncher"
 
 echo "Installing $APP_NAME..."
 
-# Create ~/Applications if it doesn't exist
-mkdir -p "$INSTALL_DIR"
+# Check if we need sudo for /Applications
+NEEDS_SUDO=false
+if [ ! -w "$INSTALL_DIR" ] || [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
+    NEEDS_SUDO=true
+    echo "Administrator privileges required to install to /Applications"
+fi
+
+# Helper to run commands with sudo if needed
+run_cmd() {
+    if [ "$NEEDS_SUDO" = true ]; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
 
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
@@ -72,16 +85,16 @@ unzip -q mylauncher.zip
 # Remove old version if exists
 if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
     echo "Removing old version..."
-    rm -rf "$INSTALL_DIR/$APP_NAME.app"
+    run_cmd rm -rf "$INSTALL_DIR/$APP_NAME.app"
 fi
 
 # Move to Applications
 echo "Installing to $INSTALL_DIR..."
-mv "$APP_NAME.app" "$INSTALL_DIR/"
+run_cmd mv "$APP_NAME.app" "$INSTALL_DIR/"
 
 # Remove quarantine attribute (bypasses Gatekeeper)
 echo "Removing quarantine..."
-xattr -cr "$INSTALL_DIR/$APP_NAME.app"
+run_cmd xattr -cr "$INSTALL_DIR/$APP_NAME.app"
 
 # Cleanup
 rm -rf "$TEMP_DIR"
@@ -92,4 +105,4 @@ echo ""
 echo "NOTE: You need to grant Accessibility permission:"
 echo "  System Settings > Privacy & Security > Accessibility > Add MyLauncher"
 echo ""
-echo "Run with: open ~/Applications/MyLauncher.app"
+echo "Run with: open /Applications/MyLauncher.app"
