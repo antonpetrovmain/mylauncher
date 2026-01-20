@@ -1,27 +1,38 @@
-"""Configuration constants for MyLauncher."""
+"""Configuration constants for MyLauncher.
+
+Values are loaded from ~/.config/mylauncher/config.toml (created on first run).
+"""
 
 from pathlib import Path
 
-# History settings
+from .user_config import get
+
+# History settings (file paths stay in home directory)
 COMMAND_HISTORY_FILE = Path.home() / ".mylauncher_history.json"
-MAX_COMMAND_HISTORY = 100
 APP_HISTORY_FILE = Path.home() / ".mylauncher_app_history.json"
-MAX_APP_HISTORY = 50
+
+# Load from user config with defaults
+MAX_COMMAND_HISTORY = get("behavior", "max_command_history", 100)
+MAX_APP_HISTORY = get("behavior", "max_app_history", 50)
+
+# Hotkey configuration
+HOTKEY_MODIFIERS = get("hotkey", "modifiers", "cmd+ctrl")
+HOTKEY_KEY = get("hotkey", "key", "d")
 
 # Execution settings
-COMMAND_TIMEOUT_SECONDS = 10
+COMMAND_TIMEOUT_SECONDS = get("behavior", "command_timeout", 10)
 
 # UI dimensions
-POPUP_WIDTH = 500
-POPUP_HEIGHT = 350
+POPUP_WIDTH = get("popup", "width", 500)
+POPUP_HEIGHT = get("popup", "height", 350)
 ITEM_ROW_HEIGHT = 20
 SEARCH_HEIGHT = 28
 MAX_DISPLAY_LEN = 60
 
 # Font settings
-FONT_FAMILY = "Menlo"
-FONT_SIZE_INPUT = 14
-FONT_SIZE_TABLE = 12
+FONT_FAMILY = get("popup", "font_family", "Menlo")
+FONT_SIZE_INPUT = get("popup", "font_size_input", 14)
+FONT_SIZE_TABLE = get("popup", "font_size_table", 12)
 
 # Colors (light mode, dark mode)
 COLOR_PALETTE = [

@@ -12,11 +12,13 @@ from pathlib import Path
 
 import rumps
 
+from . import config
 from .executor import execute_command
 from .history import get_recent, save_command
 from .hotkey import register_hotkey
 from .notifier import notify_failure, notify_success
 from .popup import popup_worker
+from .user_config import CONFIG_FILE, ensure_config_exists
 
 log = logging.getLogger(__name__)
 
@@ -88,12 +90,18 @@ class MyLauncherApp(rumps.App):
         """Build the menu bar menu."""
         version_item = rumps.MenuItem(f"MyLauncher v{get_app_version()}")
         version_item.set_callback(None)  # Disabled
+
+        # Format hotkey for display (e.g., "Cmd+Ctrl+D")
+        hotkey_display = config.HOTKEY_MODIFIERS.replace("+", "+").title() + "+" + config.HOTKEY_KEY.upper()
+
         self.menu = [
             version_item,
             None,  # Separator
-            rumps.MenuItem("Run Command...", callback=self.show_command_popup),
+            rumps.MenuItem(f"Run Command... ({hotkey_display})", callback=self.show_command_popup),
             None,  # Separator
             self._build_recent_menu(),
+            None,  # Separator
+            rumps.MenuItem("Edit Settings...", callback=self.open_settings),
             None,  # Separator
             rumps.MenuItem("Quit", callback=rumps.quit_application),
         ]
@@ -130,16 +138,26 @@ class MyLauncherApp(rumps.App):
         version_item = rumps.MenuItem(f"MyLauncher v{get_app_version()}")
         version_item.set_callback(None)
 
+        # Format hotkey for display
+        hotkey_display = config.HOTKEY_MODIFIERS.replace("+", "+").title() + "+" + config.HOTKEY_KEY.upper()
+
         self.menu.clear()
         self.menu = [
             version_item,
             None,
-            rumps.MenuItem("Run Command...", callback=self.show_command_popup),
+            rumps.MenuItem(f"Run Command... ({hotkey_display})", callback=self.show_command_popup),
             None,
             new_recent,
             None,
+            rumps.MenuItem("Edit Settings...", callback=self.open_settings),
+            None,
             rumps.MenuItem("Quit", callback=rumps.quit_application),
         ]
+
+    def open_settings(self, _=None):
+        """Open the settings file in the default text editor."""
+        ensure_config_exists()
+        subprocess.run(["open", str(CONFIG_FILE)], check=False)
 
     def show_command_popup(self, _=None):
         """Show the command input popup."""
