@@ -1,65 +1,95 @@
 #!/bin/bash
 # MyLauncher Installer
-# Downloads and installs the latest release from GitHub
+# Downloads and installs MyLauncher, bypassing Gatekeeper
+#
+# Usage: install.sh [--force|-f]
+#   --force, -f  Force reinstall even if same version is installed
+
 set -e
 
+# Parse arguments
+FORCE=false
+for arg in "$@"; do
+    case $arg in
+        --force|-f)
+            FORCE=true
+            ;;
+    esac
+done
+
 APP_NAME="MyLauncher"
-INSTALL_DIR="/Applications"
+INSTALL_DIR="$HOME/Applications"
 REPO="antonpetrovmain/mylauncher"
 
 echo "Installing $APP_NAME..."
 
+# Create ~/Applications if it doesn't exist
+mkdir -p "$INSTALL_DIR"
+
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf '$TEMP_DIR'" EXIT
+cd "$TEMP_DIR"
 
-# Fetch latest release URL from GitHub API
-echo "Fetching latest release..."
-DOWNLOAD_URL=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
-    grep "browser_download_url.*\.zip" | \
-    head -1 | \
-    cut -d '"' -f 4)
+# Get latest release download URL
+echo "Finding latest release..."
+RELEASE_URL=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep "browser_download_url.*\.zip" | cut -d '"' -f 4)
 
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Error: Could not find release download URL"
-    echo "Make sure there's a release at: https://github.com/$REPO/releases"
+if [ -z "$RELEASE_URL" ]; then
+    echo "Error: Could not find latest release"
     exit 1
 fi
 
-# Download the zip
-echo "Downloading from $DOWNLOAD_URL..."
-curl -L -o "$TEMP_DIR/$APP_NAME.zip" "$DOWNLOAD_URL"
+# Extract version from filename (e.g., MyLauncher-v0.1.5.zip)
+NEW_VERSION=$(echo "$RELEASE_URL" | sed -n 's/.*MyLauncher-v\([0-9.]*\)\.zip/\1/p')
+
+# Check currently installed version
+CURRENT_VERSION="not installed"
+if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
+    PLIST="$INSTALL_DIR/$APP_NAME.app/Contents/Info.plist"
+    if [ -f "$PLIST" ]; then
+        CURRENT_VERSION=$(defaults read "$PLIST" CFBundleShortVersionString 2>/dev/null || echo "unknown")
+    fi
+fi
+
+echo "Current version: $CURRENT_VERSION"
+echo "Installing version: $NEW_VERSION"
+
+# Skip if already up to date (unless --force)
+if [ "$CURRENT_VERSION" = "$NEW_VERSION" ] && [ "$FORCE" = false ]; then
+    echo "Already up to date! Use --force to reinstall."
+    rm -rf "$TEMP_DIR"
+    exit 0
+fi
+
+# Download latest release
+echo "Downloading..."
+curl -L -o mylauncher.zip "$RELEASE_URL"
 
 # Extract
 echo "Extracting..."
-unzip -q "$TEMP_DIR/$APP_NAME.zip" -d "$TEMP_DIR"
-
-# Find the .app bundle (may be nested in a folder)
-APP_PATH=$(find "$TEMP_DIR" -name "*.app" -type d | head -1)
-if [ -z "$APP_PATH" ]; then
-    echo "Error: Could not find .app bundle in download"
-    exit 1
-fi
+unzip -q mylauncher.zip
 
 # Remove old version if exists
 if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
     echo "Removing old version..."
-    sudo rm -rf "$INSTALL_DIR/$APP_NAME.app"
+    rm -rf "$INSTALL_DIR/$APP_NAME.app"
 fi
 
-# Move to /Applications
+# Move to Applications
 echo "Installing to $INSTALL_DIR..."
-sudo mv "$APP_PATH" "$INSTALL_DIR/$APP_NAME.app"
+mv "$APP_NAME.app" "$INSTALL_DIR/"
 
-# Remove quarantine attribute
+# Remove quarantine attribute (bypasses Gatekeeper)
 echo "Removing quarantine..."
-sudo xattr -cr "$INSTALL_DIR/$APP_NAME.app"
+xattr -cr "$INSTALL_DIR/$APP_NAME.app"
+
+# Cleanup
+rm -rf "$TEMP_DIR"
 
 echo ""
-echo "Installation complete!"
+echo "Done! MyLauncher installed to $INSTALL_DIR/$APP_NAME.app"
 echo ""
-echo "IMPORTANT: Grant Accessibility permissions to enable the global hotkey:"
-echo "  1. Open System Settings > Privacy & Security > Accessibility"
-echo "  2. Add $APP_NAME.app and enable it"
+echo "NOTE: You need to grant Accessibility permission:"
+echo "  System Settings > Privacy & Security > Accessibility > Add MyLauncher"
 echo ""
-echo "To launch: open /Applications/$APP_NAME.app"
+echo "Run with: open ~/Applications/MyLauncher.app"
