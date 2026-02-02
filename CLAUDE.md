@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MyLauncher is a macOS menu bar application that provides an app launcher and command runner with a global hotkey (Cmd+Ctrl+D). It shows running apps first (sorted by recent usage), supports app search, and can execute shell commands.
+MyLauncher is a macOS menu bar application that provides an app launcher and command runner with a global hotkey (Alt+Tab). It shows running apps first (sorted by recent usage), supports app search, and can execute shell commands.
 
 ## Development Commands
 
@@ -36,7 +36,7 @@ The application uses `rumps` for the menu bar interface combined with PyObjC for
 - **popup.py**: CustomTkinter-based popup window with app list and search. Runs in a separate process. Supports `@` prefix for all apps, `>` prefix for command mode.
 - **apps.py**: App discovery using `NSWorkspace`. `AppHistory` tracks usage for sorting (stored at `~/.mylauncher_app_history.json`). Returns running apps first (sorted by recency), then installed apps from /System/Applications, /Applications, and ~/Applications.
 - **executor.py**: Runs shell commands via subprocess in a new session group. Sources `~/.zprofile` and `~/.zshrc` for PATH (supports Homebrew), has 10-second timeout, and kills process groups on timeout.
-- **hotkey.py**: Global hotkey (Cmd+Ctrl+D) using `CGEventTap`. Runs in a background thread and calls back to the main thread via `AppHelper.callAfter`.
+- **hotkey.py**: Global hotkey (Alt+Tab) using `CGEventTap`. Runs in a background thread and calls back to the main thread via `AppHelper.callAfter`.
 - **history.py**: JSON-based command history stored at `~/.mylauncher_history.json`. Maintains up to 100 commands, deduplicates entries.
 - **notifier.py**: Async wrapper around `desktop-notifier` for success/failure notifications.
 - **config.py**: All constants (dimensions, timeouts, colors, file paths).

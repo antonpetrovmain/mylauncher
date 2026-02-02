@@ -263,7 +263,7 @@ def register_hotkey(callback: Callable[[], None]) -> None:
     Register a callback function for the global hotkey.
 
     The hotkey is configured in ~/.config/mylauncher/config.toml
-    Default: Cmd+Ctrl+D
+    Default: Alt+Tab
 
     Args:
         callback: Function to call when hotkey is pressed

@@ -16,8 +16,8 @@ MAX_COMMAND_HISTORY = get("behavior", "max_command_history", 100)
 MAX_APP_HISTORY = get("behavior", "max_app_history", 50)
 
 # Hotkey configuration
-HOTKEY_MODIFIERS = get("hotkey", "modifiers", "cmd+ctrl")
-HOTKEY_KEY = get("hotkey", "key", "d")
+HOTKEY_MODIFIERS = get("hotkey", "modifiers", "alt")
+HOTKEY_KEY = get("hotkey", "key", "tab")
 
 # Execution settings
 COMMAND_TIMEOUT_SECONDS = get("behavior", "command_timeout", 10)

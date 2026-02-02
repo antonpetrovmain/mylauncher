@@ -15,7 +15,7 @@ def callback(proxy, event_type, event, refcon):
         has_ctrl = bool(flags & MOD_CTRL)
         print(f"Key: keycode={keycode}, cmd={has_cmd}, ctrl={has_ctrl}")
         if keycode == KEY_D and has_cmd and has_ctrl:
-            print(">>> Cmd+Ctrl+D detected! <<<")
+            print(">>> Alt+Tab detected! <<<")
     return event
 
 tap = Quartz.CGEventTapCreate(
@@ -33,7 +33,7 @@ if tap is None:
     print("  System Settings > Privacy & Security > Accessibility")
 else:
     print("Event tap created. Press keys to see their codes.")
-    print("Try pressing Cmd+Ctrl+D. Press Ctrl+C to exit.\n")
+    print("Try pressing Alt+Tab. Press Ctrl+C to exit.\n")
     source = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
     Quartz.CFRunLoopAddSource(Quartz.CFRunLoopGetCurrent(), source, Quartz.kCFRunLoopCommonModes)
     Quartz.CGEventTapEnable(tap, True)

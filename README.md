@@ -5,7 +5,7 @@ A lightweight app launcher for macOS that runs in the menu bar with global hotke
 ## Features
 
 - **Menu Bar App**: Runs quietly in the menu bar with a `>_` icon
-- **Global Hotkey**: Press `Cmd+Ctrl+D` to instantly open the launcher
+- **Global Hotkey**: Press `Alt+Tab` to instantly open the launcher
 - **App Switching**: Running apps shown first, sorted by recent usage
 - **App Search**: Filter apps by typing
 - **Shell Commands**: Enter any command to execute it
@@ -51,7 +51,7 @@ cp -R dist/MyLauncher.app ~/Applications/
 ### Quick Start
 
 1. Look for `>_` in your menu bar
-2. Press **Cmd+Ctrl+D** to open the launcher
+2. Press **Alt+Tab** to open the launcher
 3. Start typing to search apps
 4. Press **Enter** to launch/focus the selected app
 
@@ -59,7 +59,7 @@ cp -R dist/MyLauncher.app ~/Applications/
 
 | Shortcut | Action |
 |----------|--------|
-| `Cmd+Ctrl+D` | Open launcher |
+| `Alt+Tab` | Open launcher |
 | `↑` / `Ctrl+P` | Move up |
 | `↓` / `Ctrl+N` | Move down |
 | `Enter` | Launch app / run command |

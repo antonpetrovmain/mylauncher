@@ -93,8 +93,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'MyLauncher',
         'CFBundleDisplayName': 'MyLauncher',
-        'CFBundleVersion': '0.1.6',
-        'CFBundleShortVersionString': '0.1.6',
+        'CFBundleVersion': '0.1.7',
+        'CFBundleShortVersionString': '0.1.7',
         'LSMinimumSystemVersion': '10.15',
         'LSUIElement': True,  # Menu bar app - no dock icon
         'NSHighResolutionCapable': True,
