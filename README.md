@@ -14,17 +14,26 @@ A lightweight app launcher for macOS that runs in the menu bar with global hotke
 
 ## Installation
 
-### Option 1: Download the App (Recommended)
+### Option 1: Install Script (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/antonpetrovmain/mylauncher/main/install.sh | bash
+```
+
+This downloads the latest release, installs to `/Applications`, and removes quarantine.
+
+After installing, grant Accessibility permissions:
+- Go to **System Settings → Privacy & Security → Accessibility**
+- Enable **MyLauncher**
+
+### Option 2: Manual Download
 
 1. Download `MyLauncher.app` from the [Releases](../../releases) page
 2. Move it to your `Applications` folder
-3. Open the app
-4. Grant Accessibility permissions when prompted:
-   - Go to **System Settings → Privacy & Security → Accessibility**
-   - Enable **MyLauncher**
-5. Restart the app
+3. Remove quarantine: `xattr -cr /Applications/MyLauncher.app`
+4. Grant Accessibility permissions (see above)
 
-### Option 2: Build from Source
+### Option 3: Build from Source
 
 ```bash
 # Clone the repository
