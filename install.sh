@@ -2,32 +2,44 @@
 # MyLauncher Installer
 # Downloads and installs MyLauncher, bypassing Gatekeeper
 #
-# Usage: install.sh [--force|-f]
-#   --force, -f  Force reinstall even if same version is installed
+# Usage: install.sh [--force|-f] [--dir|-d <path>]
+#   --force, -f        Force reinstall even if same version is installed
+#   --dir, -d <path>   Install to a custom directory instead of /Applications
 
 set -e
 
 # Parse arguments
 FORCE=false
-for arg in "$@"; do
-    case $arg in
+INSTALL_DIR="/Applications"
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --force|-f)
             FORCE=true
+            shift
+            ;;
+        --dir|-d)
+            INSTALL_DIR="$2"
+            shift 2
+            ;;
+        *)
+            shift
             ;;
     esac
 done
 
 APP_NAME="MyLauncher"
-INSTALL_DIR="/Applications"
 REPO="antonpetrovmain/mylauncher"
 
 echo "Installing $APP_NAME..."
 
-# Check if we need sudo for /Applications
+# Create install dir if it doesn't exist
+mkdir -p "$INSTALL_DIR"
+
+# Check if we need sudo
 NEEDS_SUDO=false
-if [ ! -w "$INSTALL_DIR" ] || [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
+if [ ! -w "$INSTALL_DIR" ]; then
     NEEDS_SUDO=true
-    echo "Administrator privileges required to install to /Applications"
+    echo "Administrator privileges required to install to $INSTALL_DIR"
 fi
 
 # Helper to run commands with sudo if needed
@@ -105,4 +117,4 @@ echo ""
 echo "NOTE: You need to grant Accessibility permission:"
 echo "  System Settings > Privacy & Security > Accessibility > Add MyLauncher"
 echo ""
-echo "Run with: open /Applications/MyLauncher.app"
+echo "Run with: open $INSTALL_DIR/MyLauncher.app"
